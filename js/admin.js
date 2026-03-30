@@ -1,9 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js'
 
 // ── 初始化 ──────────────────────────────────────────────
-const SUPABASE_URL = 'https://bgmcqkrxifxxcevbvzwf.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnbWNxa3J4aWZ4eGNldmJ2endmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2OTcwNjYsImV4cCI6MjA5MDI3MzA2Nn0.Jmb_MAvaZpCy1jCwgTPlD0Slpb3i55UJQ823wOXkaBc';
-
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 let currentUser = null
@@ -212,7 +210,6 @@ async function generateInviteLink() {
   const expiresAt = new Date()
   expiresAt.setHours(expiresAt.getHours() + expiryHours)
 
-  // 生成唯一 token
   const token = generateToken()
 
   const { error } = await supabase.from('invite_links').insert({
@@ -229,9 +226,7 @@ async function generateInviteLink() {
     return
   }
 
-  // 顯示連結
-  const baseUrl = window.location.origin + window.location.pathname.replace('admin.html', '')
-  const inviteUrl = `https://irrigationkelly-mom.github.io/treat-all-trips/join.html?token=${token}`;
+  const inviteUrl = `https://irrigationkelly-mom.github.io/treat-all-trips/join.html?token=${token}`
 
   document.getElementById('inviteLinkText').textContent = inviteUrl
   document.getElementById('inviteLinkResult').classList.remove('hidden')
