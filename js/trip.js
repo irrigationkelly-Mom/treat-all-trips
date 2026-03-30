@@ -84,21 +84,25 @@ async function loadTripData() {
 
   isAdmin = profile?.is_platform_admin || isCreator;
 
-  // 4. 設定權限
+    // 4. 設定權限
   if (memberData) {
     canEditMap = {
-      itinerary: memberData.can_edit_itinerary,
-      expense: memberData.can_edit_expense,
-      shopping: memberData.can_edit_shopping,
-      info: memberData.can_edit_info,
-      memo: memberData.can_use_memo,
-      packing: memberData.can_edit_tools,
+      itinerary: memberData.can_edit_itinerary,   // ✅ 正確
+      expense:   memberData.can_edit_expense,      // ✅ 正確
+      shopping:  memberData.can_edit_shopping,     // ✅ 正確
+      info:      memberData.can_edit_info,         // ✅ 正確
+      memo:      memberData.can_use_memo,          // ✅ 修正（原本就對）
+      packing:   memberData.can_use_packing,       // ✅ 修正（原 can_edit_tools 錯誤）
     };
   } else {
     // 創建者擁有全部權限
     canEditMap = {
-      itinerary: true, expense: true, shopping: true,
-      info: true, memo: true, packing: true,
+      itinerary: true,
+      expense:   true,
+      shopping:  true,
+      info:      true,
+      memo:      true,
+      packing:   true,
     };
   }
 
