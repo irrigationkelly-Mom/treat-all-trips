@@ -1,8 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js'
-
-// ── 初始化 ──────────────────────────────────────────────
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+import { supabase, waitForSession } from './auth.js'
 
 let currentUser = null
 let currentTripId = null  // 邀請 modal 用
@@ -16,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ── 驗證身份 ─────────────────────────────────────────────
 async function checkAuth() {
-  const { data: { session } } = await supabase.auth.getSession()
+  const session = await waitForSession()
 
   if (!session) {
     window.location.href = 'index.html'
@@ -152,18 +148,24 @@ async function createTrip(e) {
     return
   }
 
-  // 自動將自己加入為 admin
+  // 自動將自己加入為 admin（含所有權限）
   await supabase.from('trip_members').insert({
     trip_id: trip.id,
     user_id: currentUser.id,
     role: 'admin',
     can_view_itinerary: true,
+    can_edit_itinerary: true,
     can_view_expense: true,
+    can_edit_expense: true,
     can_view_shopping: true,
+    can_edit_shopping: true,
     can_view_info: true,
+    can_edit_info: true,
     can_view_tools: true,
     can_view_memo: true,
+    can_edit_memo: true,
     can_view_packing: true,
+    can_edit_packing: true,
     can_view_private_expense: true
   })
 
