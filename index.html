@@ -11,6 +11,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/main.css" />
+  <style>
+    /* 確保 page-loading 初始可見 */
+    #page-loading {
+      display: flex !important;
+    }
+  </style>
 </head>
 <body>
 
@@ -115,7 +121,7 @@
     </div>
   </div>
 
-  <script type="module" src="js/auth.js"></script>
+  <!-- 只載入一個 module 入口 -->
   <script type="module" src="js/home.js"></script>
 </body>
 </html>
