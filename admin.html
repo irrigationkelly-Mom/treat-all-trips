@@ -26,25 +26,46 @@
 
       <form id="createTripForm" class="form-stack">
 
+        <!-- Emoji + 名稱 -->
         <div class="form-row">
           <div class="form-group" style="flex:0 0 80px">
             <label class="form-label">Emoji</label>
-            <input type="text" id="tripEmoji" class="form-input" 
+            <input type="text" id="tripEmoji" class="form-input"
               placeholder="✈️" maxlength="4" />
           </div>
           <div class="form-group" style="flex:1">
             <label class="form-label">旅行名稱 *</label>
-            <input type="text" id="tripName" class="form-input" 
+            <input type="text" id="tripName" class="form-input"
               placeholder="例：日本自由行2025" required />
           </div>
         </div>
 
+        <!-- 封面圖片上傳 -->
+        <div class="form-group">
+          <label class="form-label">封面圖片（選填）</label>
+          <div class="cover-upload-area" id="coverUploadArea">
+            <img id="coverPreview" class="cover-preview hidden" alt="封面預覽" />
+            <div id="coverUploadPlaceholder" class="cover-upload-placeholder">
+              <span class="cover-upload-icon">🖼️</span>
+              <span>點擊上傳封面圖片</span>
+              <span class="cover-upload-hint">建議尺寸 800×400，JPG/PNG</span>
+            </div>
+            <input type="file" id="coverImageInput" accept="image/*"
+              class="cover-file-input" />
+          </div>
+          <button type="button" id="removeCoverBtn" class="btn btn-ghost btn-sm hidden" style="margin-top:4px">
+            🗑️ 移除圖片
+          </button>
+        </div>
+
+        <!-- 目的地 -->
         <div class="form-group">
           <label class="form-label">目的地</label>
-          <input type="text" id="tripDestination" class="form-input" 
+          <input type="text" id="tripDestination" class="form-input"
             placeholder="例：東京、大阪" />
         </div>
 
+        <!-- 日期 -->
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">出發日期</label>
@@ -56,6 +77,7 @@
           </div>
         </div>
 
+        <!-- 基礎貨幣 -->
         <div class="form-group">
           <label class="form-label">基礎貨幣</label>
           <select id="tripCurrency" class="form-input">
@@ -72,15 +94,16 @@
           </select>
         </div>
 
+        <!-- 旅行說明 -->
         <div class="form-group">
           <label class="form-label">旅行說明</label>
-          <textarea id="tripDescription" class="form-input form-textarea" 
+          <textarea id="tripDescription" class="form-input form-textarea"
             placeholder="備註、說明..."></textarea>
         </div>
 
         <div id="createTripMessage" class="message hidden"></div>
 
-        <button type="submit" class="btn btn-primary btn-full">
+        <button type="submit" id="createTripBtn" class="btn btn-primary btn-full">
           ✨ 建立旅行
         </button>
 
@@ -109,7 +132,7 @@
 
         <div class="form-group">
           <label class="form-label">受邀者姓名（選填）</label>
-          <input type="text" id="inviteeName" class="form-input" 
+          <input type="text" id="inviteeName" class="form-input"
             placeholder="例：小明" />
         </div>
 
@@ -161,6 +184,12 @@
           </div>
         </div>
 
+        <div class="form-group">
+          <label class="form-label">最大使用次數（0 = 不限）</label>
+          <input type="number" id="inviteMaxUses" class="form-input"
+            min="0" max="100" value="0" />
+        </div>
+
         <button id="generateInviteBtn" class="btn btn-primary btn-full">
           🔗 生成邀請連結
         </button>
@@ -171,10 +200,23 @@
             <span id="inviteLinkText" class="invite-link-text"></span>
           </div>
           <button id="copyInviteLink" class="btn btn-secondary btn-full">
-            📋 複製
+            📋 複製連結
           </button>
         </div>
 
+      </div>
+    </div>
+  </div>
+
+  <!-- 成員管理 Modal -->
+  <div id="membersModal" class="modal-overlay hidden">
+    <div class="modal-box modal-box-wide">
+      <div class="modal-header">
+        <h3 class="modal-title">👥 成員管理</h3>
+        <button id="closeMembersModal" class="btn-icon">✕</button>
+      </div>
+      <div id="membersList" class="members-list">
+        <div class="loading-placeholder">載入中...</div>
       </div>
     </div>
   </div>
