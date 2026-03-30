@@ -231,7 +231,7 @@ async function generateInviteLink() {
 
   // 顯示連結
   const baseUrl = window.location.origin + window.location.pathname.replace('admin.html', '')
-  const inviteUrl = `${baseUrl}join.html?token=${token}`
+  const inviteUrl = `https://irrigationkelly-mom.github.io/treat-all-trips/join.html?token=${token}`;
 
   document.getElementById('inviteLinkText').textContent = inviteUrl
   document.getElementById('inviteLinkResult').classList.remove('hidden')
