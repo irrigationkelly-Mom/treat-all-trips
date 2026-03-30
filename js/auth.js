@@ -10,15 +10,9 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // ── 輔助：取得正確的 Base URL ─────────────────────
 function getBaseUrl() {
   const origin = location.origin;
-  // GitHub Pages: /repo-name/  |  localhost: /
   const pathParts = location.pathname.split('/').filter(Boolean);
 
-  // 若部署在子路徑（如 GitHub Pages），保留第一段
-  // e.g. https://user.github.io/treat-all-trips/ → /treat-all-trips
-  if (
-    origin.includes('github.io') &&
-    pathParts.length >= 1
-  ) {
+  if (origin.includes('github.io') && pathParts.length >= 1) {
     return `${origin}/${pathParts[0]}`;
   }
 
@@ -54,7 +48,6 @@ export async function getUserProfile(userId) {
 
 // ── 發送 Magic Link ───────────────────────────────
 export async function sendMagicLink(email, redirectTo) {
-  // 預設導向：回到首頁（自動偵測 GitHub Pages 子路徑）
   const defaultRedirect = `${getBaseUrl()}/index.html`;
 
   const { error } = await supabase.auth.signInWithOtp({
@@ -77,7 +70,6 @@ export async function signOut() {
   if (error) {
     console.warn('[auth] signOut error:', error.message);
   }
-  // 導回首頁（相對路徑，適應各部署環境）
   location.href = `${getBaseUrl()}/index.html`;
 }
 
@@ -94,4 +86,33 @@ export async function getSession() {
     return null;
   }
   return session;
+}
+
+// ── 等待 Session 就緒（適合頁面初始化 + Magic Link 回調）──
+export async function waitForSession(timeoutMs = 5000) {
+  return new Promise((resolve) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      // 已有 session，直接回傳
+      if (session) {
+        resolve(session);
+        return;
+      }
+
+      // 無 session → 監聽狀態變化（例如 Magic Link 剛完成驗證）
+      const timer = setTimeout(() => {
+        subscription.unsubscribe();
+        resolve(null); // 超時回傳 null
+      }, timeoutMs);
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        (event, session) => {
+          if (session) {
+            clearTimeout(timer);
+            subscription.unsubscribe();
+            resolve(session);
+          }
+        }
+      );
+    });
+  });
 }
