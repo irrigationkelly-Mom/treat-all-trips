@@ -1,83 +1,325 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>加入旅行 - Treat All Trips</title>
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#8b1a1a" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/main.css" />
+  <title>Join Trip — Treat All Trips</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .join-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .join-card {
+      background: white;
+      border-radius: 1.5rem;
+      padding: 2.5rem 2rem;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      text-align: center;
+    }
+
+    .join-card .logo {
+      font-size: 3rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .join-card h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 0.25rem;
+    }
+
+    .join-card .subtitle {
+      color: #6b7280;
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+
+    /* State panels */
+    .state-panel { display: none; }
+    .state-panel.active { display: block; }
+
+    /* Loading */
+    #state-loading .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid #e5e7eb;
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 1rem auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Trip info card */
+    .trip-preview {
+      background: #f8f7ff;
+      border: 2px solid #e0e7ff;
+      border-radius: 1rem;
+      padding: 1.25rem;
+      margin: 1.25rem 0;
+      text-align: left;
+    }
+    .trip-preview .trip-name {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 0.25rem;
+    }
+    .trip-preview .trip-meta {
+      font-size: 0.82rem;
+      color: #6b7280;
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+    .trip-preview .trip-meta span {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    /* Auth section */
+    .auth-section {
+      margin-top: 1.25rem;
+    }
+    .auth-section label {
+      display: block;
+      text-align: left;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.4rem;
+    }
+    .auth-section input[type="email"] {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 0.75rem;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+      box-sizing: border-box;
+    }
+    .auth-section input[type="email"]:focus {
+      border-color: #667eea;
+    }
+
+    /* Buttons */
+    .btn-primary {
+      width: 100%;
+      padding: 0.85rem;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      border-radius: 0.75rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 0.75rem;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 0.75rem;
+      background: transparent;
+      color: #667eea;
+      border: 2px solid #667eea;
+      border-radius: 0.75rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: background 0.2s;
+    }
+    .btn-secondary:hover { background: #f0f0ff; }
+
+    /* Divider */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 1.25rem 0 0.75rem;
+      color: #9ca3af;
+      font-size: 0.8rem;
+    }
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e5e7eb;
+    }
+
+    /* Already signed in */
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: #f0fdf4;
+      border: 2px solid #bbf7d0;
+      border-radius: 0.75rem;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      text-align: left;
+    }
+    .user-badge .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .user-badge .user-info .name {
+      font-weight: 600;
+      color: #166534;
+      font-size: 0.9rem;
+    }
+    .user-badge .user-info .email {
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+
+    /* Status messages */
+    .status-msg {
+      font-size: 0.85rem;
+      padding: 0.6rem 0.75rem;
+      border-radius: 0.5rem;
+      margin-top: 0.75rem;
+      text-align: left;
+    }
+    .status-msg.error {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+    .status-msg.success {
+      background: #f0fdf4;
+      color: #16a34a;
+      border: 1px solid #bbf7d0;
+    }
+    .status-msg.info {
+      background: #eff6ff;
+      color: #2563eb;
+      border: 1px solid #bfdbfe;
+    }
+
+    /* Error/Success states */
+    #state-error .error-icon,
+    #state-success .success-icon,
+    #state-already-member .member-icon {
+      font-size: 3.5rem;
+      margin: 0.5rem 0 1rem;
+    }
+    #state-error h2 { color: #dc2626; font-size: 1.2rem; margin-bottom: 0.5rem; }
+    #state-success h2 { color: #16a34a; font-size: 1.2rem; margin-bottom: 0.5rem; }
+    #state-already-member h2 { color: #d97706; font-size: 1.2rem; margin-bottom: 0.5rem; }
+
+    .redirect-note {
+      font-size: 0.82rem;
+      color: #9ca3af;
+      margin-top: 1rem;
+    }
+
+    /* Magic link sent */
+    #state-magic-sent .envelope-icon {
+      font-size: 3.5rem;
+      margin: 0.5rem 0 1rem;
+    }
+    #state-magic-sent h2 { font-size: 1.2rem; color: #1a1a2e; margin-bottom: 0.5rem; }
+  </style>
 </head>
 <body>
+  <div class="join-container">
+    <div class="join-card">
+      <div class="logo">✈️</div>
+      <h1>Treat All Trips</h1>
+      <p class="subtitle">You've been invited to join a trip</p>
 
-  <div class="auth-container">
-
-    <!-- 載入中 -->
-    <div id="join-loading" class="join-state">
-      <div class="loading-spinner large"></div>
-      <p>驗證邀請連結⋯</p>
-    </div>
-
-    <!-- 確認加入 -->
-    <div id="join-confirm" class="auth-card" style="display:none;">
-      <div class="join-trip-emoji" id="join-trip-emoji"></div>
-      <h2 class="auth-card-title">您已受邀加入</h2>
-      <div class="join-trip-info">
-        <h3 id="join-trip-name" class="join-trip-name"></h3>
-        <p id="join-trip-dest" class="join-trip-dest"></p>
-        <p id="join-trip-dates" class="join-trip-dates"></p>
+      <!-- STATE: Loading / Validating -->
+      <div id="state-loading" class="state-panel active">
+        <div class="spinner"></div>
+        <p style="color:#6b7280; font-size:0.9rem;" id="loading-msg">Validating invite link…</p>
       </div>
-      
-      <!-- 未登入時顯示 -->
-      <div id="join-need-auth" style="display:none;">
-        <p class="auth-card-desc">請先登入以加入旅行</p>
-        <div class="form-group">
-          <label class="form-label">電子郵件</label>
-          <input 
-            type="email" 
-            id="join-email" 
-            class="form-input" 
-            placeholder="your@email.com"
-          />
+
+      <!-- STATE: Invalid / Expired / Used up -->
+      <div id="state-error" class="state-panel">
+        <div class="error-icon">🚫</div>
+        <h2 id="error-title">Invalid Invite</h2>
+        <p id="error-body" style="color:#6b7280; font-size:0.9rem;"></p>
+        <button class="btn-secondary" onclick="window.location.href='index.html'">Go Home</button>
+      </div>
+
+      <!-- STATE: Already a member -->
+      <div id="state-already-member" class="state-panel">
+        <div class="member-icon">🎉</div>
+        <h2>Already a Member!</h2>
+        <p id="already-member-msg" style="color:#6b7280; font-size:0.9rem;"></p>
+        <button class="btn-primary" id="btn-go-trip-already">Open Trip</button>
+      </div>
+
+      <!-- STATE: Join (main) -->
+      <div id="state-join" class="state-panel">
+        <!-- Trip preview -->
+        <div class="trip-preview">
+          <div class="trip-name" id="preview-trip-name">Loading…</div>
+          <div id="preview-trip-desc" style="font-size:0.85rem; color:#6b7280; margin-top:0.3rem;"></div>
+          <div class="trip-meta">
+            <span id="preview-trip-dates"></span>
+            <span id="preview-trip-dest"></span>
+          </div>
         </div>
-        <button id="join-send-magic-link" class="btn btn-primary btn-full">
-          發送登入連結並加入旅行
-        </button>
-        <div id="join-auth-message" class="auth-message" style="display:none;"></div>
+
+        <!-- Signed-in user badge OR email input -->
+        <div id="join-auth-area">
+          <!-- Populated by JS -->
+        </div>
+
+        <div id="join-status"></div>
       </div>
 
-      <!-- 已登入時顯示 -->
-      <div id="join-logged-in" style="display:none;">
-        <p class="auth-card-desc">點擊下方按鈕確認加入旅行</p>
-        <button id="join-confirm-btn" class="btn btn-primary btn-full">
-          確認加入旅行 🎉
+      <!-- STATE: Magic link sent -->
+      <div id="state-magic-sent" class="state-panel">
+        <div class="envelope-icon">📧</div>
+        <h2>Check your email</h2>
+        <p id="magic-sent-msg" style="color:#6b7280; font-size:0.9rem; margin-bottom:1rem;"></p>
+        <div class="status-msg info">
+          After clicking the link in your email, you'll be automatically added to the trip and redirected.
+        </div>
+        <button class="btn-secondary" style="margin-top:1rem;" onclick="showState('state-join')">
+          ← Use a different email
         </button>
       </div>
-    </div>
 
-    <!-- 已是成員 -->
-    <div id="join-already" class="auth-card" style="display:none;">
-      <div class="auth-sent-icon">✅</div>
-      <h2 class="auth-card-title">您已是旅行成員</h2>
-      <p class="auth-card-desc" id="join-already-desc"></p>
-      <button id="join-go-trip" class="btn btn-primary btn-full">
-        前往旅行
-      </button>
-    </div>
+      <!-- STATE: Success -->
+      <div id="state-success" class="state-panel">
+        <div class="success-icon">🎊</div>
+        <h2>You're in!</h2>
+        <p id="success-msg" style="color:#6b7280; font-size:0.9rem;"></p>
+        <button class="btn-primary" id="btn-go-trip-success">Open Trip</button>
+        <p class="redirect-note" id="redirect-countdown"></p>
+      </div>
 
-    <!-- 錯誤狀態 -->
-    <div id="join-error" class="auth-card" style="display:none;">
-      <div class="auth-sent-icon">❌</div>
-      <h2 class="auth-card-title">邀請連結無效</h2>
-      <p class="auth-card-desc" id="join-error-desc">此邀請連結已過期或不存在</p>
-      <button onclick="location.href='index.html'" class="btn btn-ghost btn-full">
-        返回首頁
-      </button>
     </div>
-
   </div>
 
   <script type="module" src="js/join.js"></script>
