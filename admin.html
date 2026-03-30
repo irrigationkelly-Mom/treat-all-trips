@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理後台 - Treat All Trips</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+
+    <!-- 頂部導航 -->
+    <header class="app-header">
+      <div class="header-content">
+        <h1 class="header-title">⚙️ 管理後台</h1>
+        <button id="logoutBtn" class="btn btn-ghost btn-sm">登出</button>
+      </div>
+    </header>
+
+    <!-- 主要內容 -->
+    <main class="main-content">
+
+      <!-- 建立新旅行 -->
+      <section class="card mb-4">
+        <h2 class="section-title">✈️ 建立新旅行</h2>
+        
+        <form id="createTripForm">
+          <div class="form-group">
+            <label class="form-label">旅行名稱 *</label>
+            <input 
+              type="text" 
+              id="tripName" 
+              class="form-input" 
+              placeholder="例如：日本東京五日遊"
+              required
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">旅行 Emoji</label>
+            <input 
+              type="text" 
+              id="tripEmoji" 
+              class="form-input" 
+              placeholder="🗼"
+              maxlength="2"
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">目的地</label>
+            <input 
+              type="text" 
+              id="tripDestination" 
+              class="form-input" 
+              placeholder="例如：東京，日本"
+            >
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">開始日期</label>
+              <input type="date" id="tripStartDate" class="form-input">
+            </div>
+            <div class="form-group">
+              <label class="form-label">結束日期</label>
+              <input type="date" id="tripEndDate" class="form-input">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">旅行幣別</label>
+            <select id="tripCurrency" class="form-input">
+              <option value="TWD">TWD - 新台幣</option>
+              <option value="JPY">JPY - 日圓</option>
+              <option value="USD">USD - 美元</option>
+              <option value="EUR">EUR - 歐元</option>
+              <option value="GBP">GBP - 英鎊</option>
+              <option value="HKD">HKD - 港幣</option>
+              <option value="KRW">KRW - 韓元</option>
+              <option value="THB">THB - 泰銖</option>
+              <option value="SGD">SGD - 新加坡幣</option>
+              <option value="AUD">AUD - 澳幣</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">旅行描述</label>
+            <textarea 
+              id="tripDescription" 
+              class="form-input form-textarea" 
+              placeholder="簡單描述這次旅行..."
+              rows="3"
+            ></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-full">
+            ✈️ 建立旅行
+          </button>
+        </form>
+
+        <!-- 建立結果訊息 -->
+        <div id="createTripMessage" class="message hidden"></div>
+      </section>
+
+      <!-- 我的旅行列表 -->
+      <section class="card mb-4">
+        <h2 class="section-title">📋 所有旅行</h2>
+        <div id="tripsList" class="trips-list">
+          <div class="loading-placeholder">載入中...</div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- 邀請連結 Modal -->
+  <div id="inviteModal" class="modal hidden">
+    <div class="modal-overlay" id="modalOverlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">🔗 邀請連結</h3>
+        <button class="modal-close" id="closeModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">成員名稱</label>
+          <input 
+            type="text" 
+            id="inviteeName" 
+            class="form-input" 
+            placeholder="輸入成員名稱"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">權限設定</label>
+          <div class="permission-grid">
+            <label class="permission-item">
+              <input type="checkbox" id="perm_itinerary" checked> 行程
+            </label>
+            <label class="permission-item">
+              <input type="checkbox" id="perm_expense" checked> 費用
+            </label>
+            <label class="permission-item">
+              <input type="checkbox" id="perm_shopping" checked> 購物
+            </label>
+            <label class="permission-item">
+              <input type="checkbox" id="perm_info" checked> 資訊
+            </label>
+            <label class="permission-item">
+              <input type="checkbox" id="perm_tools" checked> 工具
+            </label>
+            <label class="permission-item">
+              <input type="checkbox" id="perm_memo" checked> 備忘錄
+            </label>
+            <label class="permission-item">
+              <input type="checkbox" id="perm_packing" checked> 打包清單
+            </label>
+            <label class="permission-item">
+              <input type="checkbox" id="perm_private_expense"> 私人費用
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">連結有效期</label>
+          <select id="inviteExpiry" class="form-input">
+            <option value="24">24 小時</option>
+            <option value="72">3 天</option>
+            <option value="168" selected>7 天</option>
+            <option value="720">30 天</option>
+          </select>
+        </div>
+
+        <button id="generateInviteBtn" class="btn btn-primary btn-full">
+          🔗 生成邀請連結
+        </button>
+
+        <div id="inviteLinkResult" class="hidden">
+          <div class="invite-link-box">
+            <p class="invite-link-text" id="inviteLinkText"></p>
+            <button id="copyInviteLink" class="btn btn-secondary btn-sm">
+              📋 複製
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>
