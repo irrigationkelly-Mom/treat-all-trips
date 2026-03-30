@@ -1,214 +1,202 @@
-import { supabase } from './supabase-client.js';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-let currentUser = null;
-let currentTripId = null;
+// ── 初始化 ──────────────────────────────────────────────
+const SUPABASE_URL = 'https://bgmcqkrxifxxcevbvzwf.supabase.co'
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnbWNxa3J4aWZ4eGNldmJ2endmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkwMjk0MzksImV4cCI6MjA2NDYwNTQzOX0.oj0YtPnzuNrHuMxPMXBaLMEsDCBbS5FmQCWjKYzBrmo'
 
-// 初始化
-async function init() {
-  const { data: { session } } = await supabase.auth.getSession();
-  
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+let currentUser = null
+let currentTripId = null  // 邀請 modal 用
+
+// ── 頁面載入 ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  await checkAuth()
+  await loadTrips()
+  bindEvents()
+})
+
+// ── 驗證身份 ─────────────────────────────────────────────
+async function checkAuth() {
+  const { data: { session } } = await supabase.auth.getSession()
+
   if (!session) {
-    window.location.href = '/treat-all-trips/';
-    return;
+    window.location.href = 'index.html'
+    return
   }
 
-  currentUser = session.user;
+  currentUser = session.user
 
   // 確認是 Platform Admin
   const { data: profile } = await supabase
     .from('profiles')
-    .select('is_platform_admin, display_name')
+    .select('is_platform_admin, display_name, full_name')
     .eq('id', currentUser.id)
-    .single();
+    .single()
 
   if (!profile?.is_platform_admin) {
-    alert('你沒有管理員權限');
-    window.location.href = '/treat-all-trips/';
-    return;
+    alert('⛔ 你沒有管理員權限')
+    window.location.href = 'index.html'
+    return
   }
 
-  setupEventListeners();
-  loadTrips();
+  console.log('✅ 管理員登入：', profile.display_name || profile.full_name)
 }
 
-// 綁定事件
-function setupEventListeners() {
-  // 建立旅行表單
-  document.getElementById('createTripForm')
-    .addEventListener('submit', handleCreateTrip);
-
-  // 登出
-  document.getElementById('logoutBtn')
-    .addEventListener('click', async () => {
-      await supabase.auth.signOut();
-      window.location.href = '/treat-all-trips/';
-    });
-
-  // Modal 關閉
-  document.getElementById('closeModal')
-    .addEventListener('click', closeModal);
-  document.getElementById('modalOverlay')
-    .addEventListener('click', closeModal);
-
-  // 生成邀請連結
-  document.getElementById('generateInviteBtn')
-    .addEventListener('click', generateInviteLink);
-
-  // 複製連結
-  document.getElementById('copyInviteLink')
-    .addEventListener('click', copyInviteLink);
-}
-
-// 建立旅行
-async function handleCreateTrip(e) {
-  e.preventDefault();
-
-  const name = document.getElementById('tripName').value.trim();
-  const emoji = document.getElementById('tripEmoji').value.trim() || '✈️';
-  const destination = document.getElementById('tripDestination').value.trim();
-  const startDate = document.getElementById('tripStartDate').value;
-  const endDate = document.getElementById('tripEndDate').value;
-  const currency = document.getElementById('tripCurrency').value;
-  const description = document.getElementById('tripDescription').value.trim();
-
-  if (!name) return;
-
-  const msgEl = document.getElementById('createTripMessage');
-  showMessage(msgEl, '建立中...', 'info');
-
-  try {
-    // 生成唯一 trip_code
-    const tripCode = generateTripCode();
-
-    const { data: trip, error } = await supabase
-      .from('trips')
-      .insert({
-        name,
-        emoji,
-        destination,
-        start_date: startDate || null,
-        end_date: endDate || null,
-        base_currency: currency,
-        description,
-        trip_code: tripCode,
-        created_by: currentUser.id
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    // 將 Admin 加入為成員（擁有全部權限）
-    await supabase.from('trip_members').insert({
-      trip_id: trip.id,
-      user_id: currentUser.id,
-      display_name: '管理員',
-      can_view_itinerary: true,
-      can_view_expense: true,
-      can_view_shopping: true,
-      can_view_info: true,
-      can_view_tools: true,
-      can_view_memo: true,
-      can_view_packing: true,
-      can_view_private_expense: true,
-      joined_at: new Date().toISOString()
-    });
-
-    showMessage(msgEl, `✅ 旅行「${name}」建立成功！`, 'success');
-    document.getElementById('createTripForm').reset();
-    loadTrips();
-
-  } catch (err) {
-    console.error(err);
-    showMessage(msgEl, `❌ 建立失敗：${err.message}`, 'error');
-  }
-}
-
-// 載入旅行列表
+// ── 載入旅行列表 ──────────────────────────────────────────
 async function loadTrips() {
-  const listEl = document.getElementById('tripsList');
-  listEl.innerHTML = '<div class="loading-placeholder">載入中...</div>';
+  const container = document.getElementById('tripsList')
 
-  try {
-    const { data: trips, error } = await supabase
-      .from('trips')
-      .select(`
-        *,
-        trip_members(count)
-      `)
-      .order('created_at', { ascending: false });
+  const { data: trips, error } = await supabase
+    .from('trips')
+    .select('*')
+    .order('created_at', { ascending: false })
 
-    if (error) throw error;
+  if (error) {
+    container.innerHTML = `<div class="message error">載入失敗：${error.message}</div>`
+    return
+  }
 
-    if (!trips || trips.length === 0) {
-      listEl.innerHTML = '<p class="empty-state">還沒有旅行，建立第一個吧！</p>';
-      return;
+  if (!trips || trips.length === 0) {
+    container.innerHTML = `<div class="empty-state">還沒有旅行，快建立第一個！🌍</div>`
+    return
+  }
+
+  container.innerHTML = trips.map(trip => renderTripCard(trip)).join('')
+
+  // 綁定每張卡片的按鈕
+  trips.forEach(trip => {
+    const inviteBtn = document.getElementById(`invite-${trip.id}`)
+    const goBtn = document.getElementById(`go-${trip.id}`)
+
+    if (inviteBtn) {
+      inviteBtn.addEventListener('click', () => openInviteModal(trip.id, trip.name))
     }
+    if (goBtn) {
+      goBtn.addEventListener('click', () => {
+        window.location.href = `trip.html?id=${trip.id}`
+      })
+    }
+  })
+}
 
-    listEl.innerHTML = trips.map(trip => `
-      <div class="trip-card" data-trip-id="${trip.id}">
-        <div class="trip-card-header">
-          <span class="trip-emoji">${trip.emoji || '✈️'}</span>
-          <div class="trip-card-info">
-            <h3 class="trip-card-name">${trip.name}</h3>
-            <p class="trip-card-meta">
-              ${trip.destination ? `📍 ${trip.destination}` : ''}
-              ${trip.start_date ? `📅 ${formatDate(trip.start_date)}` : ''}
-            </p>
-            <p class="trip-card-meta">
-              💰 ${trip.base_currency} 
-              · 🔑 ${trip.trip_code}
-            </p>
-          </div>
-        </div>
-        <div class="trip-card-actions">
-          <button 
-            class="btn btn-secondary btn-sm"
-            onclick="openTripPage('${trip.trip_code}')"
-          >
-            開啟旅行
-          </button>
-          <button 
-            class="btn btn-primary btn-sm"
-            onclick="openInviteModal('${trip.id}', '${trip.name}')"
-          >
-            邀請成員
-          </button>
+// ── 渲染旅行卡片 ──────────────────────────────────────────
+function renderTripCard(trip) {
+  const emoji = trip.emoji || '✈️'
+  const start = trip.start_date ? formatDate(trip.start_date) : '未設定'
+  const end = trip.end_date ? formatDate(trip.end_date) : '未設定'
+  const dest = trip.destination || '目的地未設定'
+
+  return `
+    <div class="trip-card">
+      <div class="trip-card-header">
+        <span class="trip-emoji">${emoji}</span>
+        <div class="trip-info">
+          <div class="trip-name">${escapeHtml(trip.name)}</div>
+          <div class="trip-meta">${escapeHtml(dest)}</div>
+          <div class="trip-meta">📅 ${start} ~ ${end}</div>
+          <div class="trip-meta">💱 ${trip.base_currency || 'TWD'}</div>
         </div>
       </div>
-    `).join('');
+      <div class="trip-card-actions">
+        <button id="invite-${trip.id}" class="btn btn-secondary btn-sm">
+          🔗 邀請
+        </button>
+        <button id="go-${trip.id}" class="btn btn-primary btn-sm">
+          → 進入
+        </button>
+      </div>
+    </div>
+  `
+}
 
-  } catch (err) {
-    console.error(err);
-    listEl.innerHTML = '<p class="error-state">載入失敗</p>';
+// ── 建立旅行 ──────────────────────────────────────────────
+async function createTrip(e) {
+  e.preventDefault()
+
+  const name = document.getElementById('tripName').value.trim()
+  const emoji = document.getElementById('tripEmoji').value.trim() || '✈️'
+  const destination = document.getElementById('tripDestination').value.trim()
+  const startDate = document.getElementById('tripStartDate').value
+  const endDate = document.getElementById('tripEndDate').value
+  const currency = document.getElementById('tripCurrency').value
+  const description = document.getElementById('tripDescription').value.trim()
+
+  if (!name) {
+    showMessage('createTripMessage', '⚠️ 請輸入旅行名稱', 'warning')
+    return
   }
+
+  const submitBtn = document.querySelector('#createTripForm button[type="submit"]')
+  submitBtn.disabled = true
+  submitBtn.textContent = '建立中...'
+
+  const { data: trip, error } = await supabase
+    .from('trips')
+    .insert({
+      name,
+      emoji,
+      destination: destination || null,
+      start_date: startDate || null,
+      end_date: endDate || null,
+      base_currency: currency,
+      description: description || null,
+      created_by: currentUser.id
+    })
+    .select()
+    .single()
+
+  submitBtn.disabled = false
+  submitBtn.textContent = '✨ 建立旅行'
+
+  if (error) {
+    showMessage('createTripMessage', `❌ 建立失敗：${error.message}`, 'error')
+    return
+  }
+
+  // 自動將自己加入為 admin
+  await supabase.from('trip_members').insert({
+    trip_id: trip.id,
+    user_id: currentUser.id,
+    role: 'admin',
+    can_view_itinerary: true,
+    can_view_expense: true,
+    can_view_shopping: true,
+    can_view_info: true,
+    can_view_tools: true,
+    can_view_memo: true,
+    can_view_packing: true,
+    can_view_private_expense: true
+  })
+
+  showMessage('createTripMessage', '✅ 旅行建立成功！', 'success')
+  document.getElementById('createTripForm').reset()
+  document.getElementById('tripEmoji').value = ''
+
+  // 重新載入列表
+  await loadTrips()
 }
 
-// 開啟旅行頁面
-window.openTripPage = function(tripCode) {
-  window.location.href = `/treat-all-trips/trip.html?code=${tripCode}`;
-};
-
-// 開啟邀請 Modal
-window.openInviteModal = function(tripId, tripName) {
-  currentTripId = tripId;
-  document.querySelector('.modal-title').textContent = `🔗 邀請加入「${tripName}」`;
-  document.getElementById('inviteLinkResult').classList.add('hidden');
-  document.getElementById('inviteModal').classList.remove('hidden');
-};
-
-// 關閉 Modal
-function closeModal() {
-  document.getElementById('inviteModal').classList.add('hidden');
-  currentTripId = null;
+// ── 邀請 Modal ────────────────────────────────────────────
+function openInviteModal(tripId, tripName) {
+  currentTripId = tripId
+  document.querySelector('.modal-title').textContent = `🔗 邀請成員 - ${tripName}`
+  document.getElementById('inviteModal').classList.remove('hidden')
+  document.getElementById('inviteLinkResult').classList.add('hidden')
+  document.getElementById('inviteeName').value = ''
 }
 
-// 生成邀請連結
+function closeInviteModal() {
+  document.getElementById('inviteModal').classList.add('hidden')
+  currentTripId = null
+}
+
+// ── 生成邀請連結 ──────────────────────────────────────────
 async function generateInviteLink() {
-  if (!currentTripId) return;
+  if (!currentTripId) return
 
-  const inviteeName = document.getElementById('inviteeName').value.trim();
-  const expiryHours = parseInt(document.getElementById('inviteExpiry').value);
+  const inviteeName = document.getElementById('inviteeName').value.trim()
+  const expiryHours = parseInt(document.getElementById('inviteExpiry').value)
 
   const permissions = {
     can_view_itinerary: document.getElementById('perm_itinerary').checked,
@@ -219,80 +207,101 @@ async function generateInviteLink() {
     can_view_memo: document.getElementById('perm_memo').checked,
     can_view_packing: document.getElementById('perm_packing').checked,
     can_view_private_expense: document.getElementById('perm_private_expense').checked
-  };
-
-  try {
-    const token = generateToken();
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + expiryHours);
-
-    const { error } = await supabase
-      .from('invite_links')
-      .insert({
-        trip_id: currentTripId,
-        token,
-        invitee_name: inviteeName || null,
-        expires_at: expiresAt.toISOString(),
-        created_by: currentUser.id,
-        ...permissions
-      });
-
-    if (error) throw error;
-
-    const inviteUrl = `https://irrigationkelly-mom.github.io/treat-all-trips/join.html?token=${token}`;
-    
-    document.getElementById('inviteLinkText').textContent = inviteUrl;
-    document.getElementById('inviteLinkResult').classList.remove('hidden');
-
-  } catch (err) {
-    console.error(err);
-    alert(`生成失敗：${err.message}`);
   }
+
+  const expiresAt = new Date()
+  expiresAt.setHours(expiresAt.getHours() + expiryHours)
+
+  // 生成唯一 token
+  const token = generateToken()
+
+  const { error } = await supabase.from('invite_links').insert({
+    trip_id: currentTripId,
+    token,
+    created_by: currentUser.id,
+    invitee_name: inviteeName || null,
+    expires_at: expiresAt.toISOString(),
+    ...permissions
+  })
+
+  if (error) {
+    alert(`❌ 生成失敗：${error.message}`)
+    return
+  }
+
+  // 顯示連結
+  const baseUrl = window.location.origin + window.location.pathname.replace('admin.html', '')
+  const inviteUrl = `${baseUrl}join.html?token=${token}`
+
+  document.getElementById('inviteLinkText').textContent = inviteUrl
+  document.getElementById('inviteLinkResult').classList.remove('hidden')
 }
 
-// 複製邀請連結
+// ── 複製連結 ──────────────────────────────────────────────
 async function copyInviteLink() {
-  const link = document.getElementById('inviteLinkText').textContent;
+  const text = document.getElementById('inviteLinkText').textContent
   try {
-    await navigator.clipboard.writeText(link);
-    document.getElementById('copyInviteLink').textContent = '✅ 已複製';
-    setTimeout(() => {
-      document.getElementById('copyInviteLink').textContent = '📋 複製';
-    }, 2000);
+    await navigator.clipboard.writeText(text)
+    const btn = document.getElementById('copyInviteLink')
+    btn.textContent = '✅ 已複製！'
+    setTimeout(() => { btn.textContent = '📋 複製' }, 2000)
   } catch {
-    alert('請手動複製連結');
+    alert('請手動複製連結')
   }
 }
 
-// 工具函數
-function generateTripCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = '';
-  for (let i = 0; i < 8; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return code;
+// ── 登出 ──────────────────────────────────────────────────
+async function logout() {
+  await supabase.auth.signOut()
+  window.location.href = 'index.html'
 }
 
+// ── 綁定事件 ──────────────────────────────────────────────
+function bindEvents() {
+  document.getElementById('createTripForm')
+    .addEventListener('submit', createTrip)
+
+  document.getElementById('logoutBtn')
+    .addEventListener('click', logout)
+
+  document.getElementById('closeModal')
+    .addEventListener('click', closeInviteModal)
+
+  document.getElementById('inviteModal')
+    .addEventListener('click', (e) => {
+      if (e.target === document.getElementById('inviteModal')) closeInviteModal()
+    })
+
+  document.getElementById('generateInviteBtn')
+    .addEventListener('click', generateInviteLink)
+
+  document.getElementById('copyInviteLink')
+    .addEventListener('click', copyInviteLink)
+}
+
+// ── 工具函式 ──────────────────────────────────────────────
 function generateToken() {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
+  const array = new Uint8Array(24)
+  crypto.getRandomValues(array)
+  return Array.from(array, b => b.toString(16).padStart(2, '0')).join('')
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('zh-TW');
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`
 }
 
-function showMessage(el, text, type) {
-  el.textContent = text;
-  el.className = `message ${type}`;
-  el.classList.remove('hidden');
-  if (type === 'success') {
-    setTimeout(() => el.classList.add('hidden'), 3000);
-  }
+function escapeHtml(str) {
+  if (!str) return ''
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
 }
 
-// 啟動
-init();
+function showMessage(elementId, text, type = 'info') {
+  const el = document.getElementById(elementId)
+  if (!el) return
+  el.textContent = text
+  el.className = `message ${type}`
+  el.classList.remove('hidden')
+  setTimeout(() => el.classList.add('hidden'), 4000)
+}
