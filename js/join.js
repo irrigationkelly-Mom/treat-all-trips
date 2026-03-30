@@ -1,71 +1,21 @@
-/**
- * js/join.js
- * Invite acceptance flow for Treat All Trips.
- *
- * Flow:
- *  1. Parse ?token= from URL
- *  2. Validate token against invite_links table
- *  3. If user is signed in  → attempt immediate join
- *  4. If user is signed out → show email input → send magic link
- *     • Magic link redirects back to join.html?token=... (PKCE flow)
- *     • On return (session present + token present) → complete join
- */
-
 import { supabase, getCurrentUser, sendMagicLink, onAuthStateChange, waitForSession } from './auth.js';
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+const getBaseUrl = () => {
+  const path = window.location.pathname;
+  const base = path.substring(0, path.lastIndexOf('/'));
+  return base || '';
+};
 
-function showState(id) {
-  document.querySelectorAll('.state-panel').forEach(el => el.classList.remove('active'));
-  const target = document.getElementById(id);
-  if (target) target.classList.add('active');
-}
-
-function setStatus(msg, type = 'error') {
-  const el = document.getElementById('join-status');
-  if (!el) return;
-  el.innerHTML = msg
-    ? `<div class="status-msg ${type}">${msg}</div>`
-    : '';
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  try {
-    return new Date(dateStr).toLocaleDateString(undefined, {
-      month: 'short', day: 'numeric', year: 'numeric'
-    });
-  } catch { return dateStr; }
-}
-
-function getInitial(nameOrEmail) {
-  if (!nameOrEmail) return '?';
-  return nameOrEmail.trim().charAt(0).toUpperCase();
-}
-
-// ─── Token from URL ──────────────────────────────────────────────────────────
-
-function getToken() {
-  return new URLSearchParams(window.location.search).get('token');
-}
-
-// ─── Validate Invite Link ─────────────────────────────────────────────────────
-
-async function validateInvite(token) {
+async function getInviteInfo(token) {
   const { data, error } = await supabase
     .from('invite_links')
     .select(`
-      id,
-      trip_id,
-      expires_at,
-      max_uses,
-      use_count,
-      is_active,
+      *,
       trips (
         id,
         name,
-        description,
         destination,
+        cover_image_url,
         start_date,
         end_date
       )
@@ -73,362 +23,233 @@ async function validateInvite(token) {
     .eq('token', token)
     .single();
 
-  if (error || !data) {
-    return { valid: false, reason: 'This invite link does not exist or has been removed.' };
-  }
-
-  if (!data.is_active) {
-    return { valid: false, reason: 'This invite link has been deactivated by the trip organiser.' };
-  }
-
-  if (data.expires_at && new Date(data.expires_at) < new Date()) {
-    return { valid: false, reason: 'This invite link has expired. Please ask the organiser for a new one.' };
-  }
-
-  if (data.max_uses !== null && data.use_count >= data.max_uses) {
-    return { valid: false, reason: 'This invite link has reached its maximum number of uses.' };
-  }
-
-  return { valid: true, invite: data };
+  if (error) return { data: null, error };
+  return { data, error: null };
 }
 
-// ─── Check Existing Membership ────────────────────────────────────────────────
+async function validateInvite(invite) {
+  if (!invite.is_active) {
+    return { valid: false, reason: '此邀請連結已停用' };
+  }
+  if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
+    return { valid: false, reason: '此邀請連結已過期' };
+  }
+  if (invite.max_uses && invite.use_count >= invite.max_uses) {
+    return { valid: false, reason: '此邀請連結已達使用上限' };
+  }
+  return { valid: true };
+}
 
-async function checkMembership(tripId, userId) {
+async function checkAlreadyMember(tripId, userId) {
   const { data, error } = await supabase
     .from('trip_members')
     .select('id')
     .eq('trip_id', tripId)
     .eq('user_id', userId)
-    .maybeSingle();
+    .single();
 
-  return !error && data !== null;
+  return !!data && !error;
 }
 
-// ─── Join Trip ────────────────────────────────────────────────────────────────
-
-async function joinTrip(inviteId, tripId, userId) {
-  // 1. Insert member row (default permissions — organiser can adjust later)
-  const { error: memberError } = await supabase
+async function joinTrip(invite, userId) {
+  // 寫入 trip_members（使用 can_ 欄位）
+  const { error: insertError } = await supabase
     .from('trip_members')
     .insert({
-      trip_id: tripId,
+      trip_id: invite.trip_id,
       user_id: userId,
-      // Default permission set — all standard features enabled
       can_view_itinerary: true,
       can_edit_itinerary: false,
-      can_add_expense: true,
-      can_view_expenses: true,
-      can_manage_shopping: true,
+      can_view_expense: true,
+      can_edit_expense: false,
+      can_view_shopping: true,
+      can_edit_shopping: false,
       can_view_info: true,
-      can_edit_memos: true,
-      can_manage_packing: true,
-      can_view_private_expenses: false,
+      can_edit_info: false,
+      can_view_tools: true,
+      can_edit_tools: false,
+      can_use_private_expense: false,
+      can_use_memo: false,
+      can_use_packing: false
     });
 
-  if (memberError) {
-    // Unique constraint → already a member race condition
-    if (memberError.code === '23505') return { success: true, alreadyMember: true };
-    return { success: false, error: memberError.message };
-  }
+  if (insertError) return { success: false, error: insertError };
 
-  // 2. Increment use_count
-  const { error: countError } = await supabase.rpc('increment_invite_use_count', {
-    invite_id: inviteId,
-  });
-
-  // Non-fatal if RPC fails — member was already inserted
-  if (countError) {
-    console.warn('Could not increment invite use_count:', countError.message);
-  }
+  // 更新邀請連結使用次數
+  await supabase
+    .from('invite_links')
+    .update({ use_count: (invite.use_count || 0) + 1 })
+    .eq('id', invite.id);
 
   return { success: true };
 }
 
-// ─── Render Trip Preview ──────────────────────────────────────────────────────
+function showError(message) {
+  document.getElementById('loading-screen').classList.add('hidden');
+  document.getElementById('invite-screen').classList.add('hidden');
+  document.getElementById('email-screen').classList.add('hidden');
+  document.getElementById('success-screen').classList.add('hidden');
+  
+  const errorScreen = document.getElementById('error-screen');
+  errorScreen.classList.remove('hidden');
+  document.getElementById('error-message').textContent = message;
+}
 
-function renderTripPreview(trip) {
-  document.getElementById('preview-trip-name').textContent = trip.name || 'Unnamed Trip';
-
-  const descEl = document.getElementById('preview-trip-desc');
-  descEl.textContent = trip.description || '';
-
-  const datesEl = document.getElementById('preview-trip-dates');
-  if (trip.start_date || trip.end_date) {
-    datesEl.innerHTML = `📅 ${formatDate(trip.start_date)}${trip.end_date ? ' → ' + formatDate(trip.end_date) : ''}`;
+function showInviteInfo(invite) {
+  document.getElementById('loading-screen').classList.add('hidden');
+  
+  const trip = invite.trips;
+  document.getElementById('trip-name').textContent = trip.name;
+  document.getElementById('trip-destination').textContent = trip.destination || '';
+  
+  if (trip.start_date && trip.end_date) {
+    const start = new Date(trip.start_date).toLocaleDateString('zh-TW');
+    const end = new Date(trip.end_date).toLocaleDateString('zh-TW');
+    document.getElementById('trip-dates').textContent = `${start} － ${end}`;
   }
 
-  const destEl = document.getElementById('preview-trip-dest');
-  if (trip.destination) {
-    destEl.innerHTML = `📍 ${trip.destination}`;
-  }
-}
-
-// ─── Render Auth Area (signed in) ────────────────────────────────────────────
-
-function renderSignedInArea(user, profile) {
-  const name = profile?.display_name || user.email;
-  const email = user.email;
-  const initial = getInitial(name);
-
-  const area = document.getElementById('join-auth-area');
-  area.innerHTML = `
-    <div class="user-badge">
-      <div class="avatar">${initial}</div>
-      <div class="user-info">
-        <div class="name">${name}</div>
-        <div class="email">${email}</div>
-      </div>
-    </div>
-    <button class="btn-primary" id="btn-join-now">Join This Trip</button>
-    <div class="divider">or</div>
-    <button class="btn-secondary" id="btn-join-different">Join with different account</button>
-  `;
-}
-
-// ─── Render Auth Area (signed out) ───────────────────────────────────────────
-
-function renderSignedOutArea() {
-  const area = document.getElementById('join-auth-area');
-  area.innerHTML = `
-    <div class="auth-section">
-      <label for="join-email">Enter your email to join</label>
-      <input
-        type="email"
-        id="join-email"
-        placeholder="you@example.com"
-        autocomplete="email"
-        autofocus
-      />
-    </div>
-    <button class="btn-primary" id="btn-send-magic">Send Magic Link</button>
-  `;
-}
-
-// ─── Start redirect countdown ─────────────────────────────────────────────────
-
-function startRedirectCountdown(tripId, seconds = 4) {
-  const btn = document.getElementById('btn-go-trip-success');
-  const note = document.getElementById('redirect-countdown');
-
-  const href = `trip.html?id=${tripId}`;
-  if (btn) btn.onclick = () => { window.location.href = href; };
-
-  let remaining = seconds;
-  note.textContent = `Redirecting in ${remaining}s…`;
-
-  const interval = setInterval(() => {
-    remaining--;
-    if (remaining <= 0) {
-      clearInterval(interval);
-      window.location.href = href;
-    } else {
-      note.textContent = `Redirecting in ${remaining}s…`;
-    }
-  }, 1000);
-}
-
-// ─── Handle Immediate Join (user already signed in) ───────────────────────────
-
-async function handleImmediateJoin(invite, user) {
-  const { id: inviteId, trip_id: tripId, trips: trip } = invite;
-  const btn = document.getElementById('btn-join-now');
-  if (!btn) return;
-
-  btn.addEventListener('click', async () => {
-    btn.disabled = true;
-    btn.textContent = 'Joining…';
-    setStatus('');
-
-    const alreadyMember = await checkMembership(tripId, user.id);
-    if (alreadyMember) {
-      showAlreadyMember(trip, tripId);
-      return;
-    }
-
-    const result = await joinTrip(inviteId, tripId, user.id);
-
-    if (!result.success) {
-      btn.disabled = false;
-      btn.textContent = 'Join This Trip';
-      setStatus(result.error || 'Failed to join. Please try again.', 'error');
-      return;
-    }
-
-    if (result.alreadyMember) {
-      showAlreadyMember(trip, tripId);
-      return;
-    }
-
-    // Success!
-    document.getElementById('success-msg').textContent =
-      `You've successfully joined "${trip.name}". Welcome aboard! 🎉`;
-    showState('state-success');
-    startRedirectCountdown(tripId);
-  });
-
-  // "Join with different account" → sign out → show email form
-  const btnDiff = document.getElementById('btn-join-different');
-  if (btnDiff) {
-    btnDiff.addEventListener('click', async () => {
-      await supabase.auth.signOut();
-      renderSignedOutArea();
-      attachMagicLinkHandler(invite);
-    });
-  }
-}
-
-// ─── Show Already Member state ────────────────────────────────────────────────
-
-function showAlreadyMember(trip, tripId) {
-  document.getElementById('already-member-msg').textContent =
-    `You're already a member of "${trip.name}".`;
-  const btn = document.getElementById('btn-go-trip-already');
-  if (btn) btn.onclick = () => { window.location.href = `trip.html?id=${tripId}`; };
-  showState('state-already-member');
-}
-
-// ─── Attach Magic Link Handler (user signed out) ──────────────────────────────
-
-function attachMagicLinkHandler(invite) {
-  const btn = document.getElementById('btn-send-magic');
-  if (!btn) return;
-
-  btn.addEventListener('click', async () => {
-    const emailInput = document.getElementById('join-email');
-    const email = emailInput?.value?.trim();
-
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setStatus('Please enter a valid email address.', 'error');
-      return;
-    }
-
-    btn.disabled = true;
-    btn.textContent = 'Sending…';
-    setStatus('');
-
-    // Build redirect URL that includes the token so we can complete join on return
-    const currentUrl = window.location.href.split('?')[0];
-    const redirectTo = `${currentUrl}?token=${getToken()}`;
-
-    const { error } = await sendMagicLink(email, redirectTo);
-
-    if (error) {
-      btn.disabled = false;
-      btn.textContent = 'Send Magic Link';
-      setStatus(error.message || 'Failed to send magic link. Please try again.', 'error');
-      return;
-    }
-
-    document.getElementById('magic-sent-msg').textContent =
-      `We sent a magic link to ${email}. Click it to join "${invite.trips.name}".`;
-    showState('state-magic-sent');
-  });
-}
-
-// ─── Complete Join After Magic Link Return ────────────────────────────────────
-
-async function completeJoinAfterAuth(invite, user) {
-  document.getElementById('loading-msg').textContent = 'Completing your membership…';
-  showState('state-loading');
-
-  const { id: inviteId, trip_id: tripId, trips: trip } = invite;
-
-  const alreadyMember = await checkMembership(tripId, user.id);
-  if (alreadyMember) {
-    showAlreadyMember(trip, tripId);
-    return;
+  if (trip.cover_image_url) {
+    document.getElementById('trip-cover').src = trip.cover_image_url;
+    document.getElementById('trip-cover').classList.remove('hidden');
   }
 
-  const result = await joinTrip(inviteId, tripId, user.id);
-
-  if (!result.success) {
-    document.getElementById('error-title').textContent = 'Could Not Join';
-    document.getElementById('error-body').textContent =
-      result.error || 'Something went wrong. Please try the invite link again.';
-    showState('state-error');
-    return;
-  }
-
-  document.getElementById('success-msg').textContent =
-    `You've successfully joined "${trip.name}". Welcome aboard! 🎉`;
-  showState('state-success');
-  startRedirectCountdown(tripId);
+  document.getElementById('invite-screen').classList.remove('hidden');
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+function showEmailForm() {
+  document.getElementById('invite-screen').classList.add('hidden');
+  document.getElementById('email-screen').classList.remove('hidden');
+}
+
+function showSuccess(tripId) {
+  document.getElementById('email-screen').classList.add('hidden');
+  document.getElementById('invite-screen').classList.add('hidden');
+  document.getElementById('success-screen').classList.remove('hidden');
+  
+  // 3秒後自動跳轉
+  setTimeout(() => {
+    window.location.href = `${getBaseUrl()}/trip.html?id=${tripId}`;
+  }, 3000);
+}
 
 async function init() {
-  const token = getToken();
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
 
   if (!token) {
-    document.getElementById('error-title').textContent = 'No Invite Token';
-    document.getElementById('error-body').textContent =
-      'This URL is missing an invite token. Please use the full link from your invitation.';
-    showState('state-error');
+    showError('無效的邀請連結：缺少 token');
     return;
   }
 
-  // 1. Validate token
-  document.getElementById('loading-msg').textContent = 'Validating invite link…';
-  const { valid, reason, invite } = await validateInvite(token);
+  // 儲存 token 供 Magic Link 回調使用
+  sessionStorage.setItem('invite_token', token);
 
-  if (!valid) {
-    document.getElementById('error-title').textContent = 'Invite Unavailable';
-    document.getElementById('error-body').textContent = reason;
-    showState('state-error');
+  // 取得邀請資訊
+  const { data: invite, error } = await getInviteInfo(token);
+  if (error || !invite) {
+    showError('找不到此邀請連結，可能已失效');
     return;
   }
 
-  // 2. Render trip preview (keep visible across join state)
-  renderTripPreview(invite.trips);
+  // 驗證邀請
+  const validation = await validateInvite(invite);
+  if (!validation.valid) {
+    showError(validation.reason);
+    return;
+  }
 
-  // 3. Check if returning from magic link (session just created)
-  const { data: { session } } = await supabase.auth.getSession();
+  // 顯示邀請資訊
+  showInviteInfo(invite);
 
-  if (session?.user) {
-    const user = session.user;
+  // 檢查用戶是否已登入
+  const user = await getCurrentUser();
 
-    // Fetch profile for display name
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('display_name, avatar_url')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    // Detect if this is a fresh auth callback (hash contains access_token)
-    // Supabase PKCE: after magic link, URL will have been processed automatically
-    const isAuthCallback = window.location.hash.includes('access_token') ||
-                           document.referrer.includes('supabase');
-
-    if (isAuthCallback || sessionStorage.getItem('join_completing_auth') === token) {
-      sessionStorage.removeItem('join_completing_auth');
-      await completeJoinAfterAuth(invite, user);
+  if (user) {
+    // 已登入：檢查是否已是成員
+    const alreadyMember = await checkAlreadyMember(invite.trip_id, user.id);
+    
+    if (alreadyMember) {
+      showSuccess(invite.trip_id);
       return;
     }
 
-    // Regular visit while already signed in
-    showState('state-join');
-    renderSignedInArea(user, profile);
-    handleImmediateJoin(invite, user);
-
+    // 顯示確認加入按鈕
+    document.getElementById('btn-join-now').classList.remove('hidden');
+    document.getElementById('btn-need-login').classList.add('hidden');
+    
+    document.getElementById('btn-join-now').addEventListener('click', async () => {
+      const result = await joinTrip(invite, user.id);
+      if (result.success) {
+        showSuccess(invite.trip_id);
+      } else {
+        showError('加入旅程失敗，請稍後再試');
+      }
+    });
   } else {
-    // Not signed in
-    showState('state-join');
-    renderSignedOutArea();
-    attachMagicLinkHandler(invite);
+    // 未登入：顯示 Email 輸入
+    document.getElementById('btn-need-login').classList.remove('hidden');
+    document.getElementById('btn-join-now').classList.add('hidden');
+    
+    document.getElementById('btn-need-login').addEventListener('click', () => {
+      showEmailForm();
+    });
 
-    // Mark session so on magic-link return we auto-complete
-    sessionStorage.setItem('join_completing_auth', token);
+    // Email 表單送出
+    document.getElementById('email-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email-input').value.trim();
+      
+      if (!email) return;
 
-    // Listen for auth state change (PKCE callback fires onAuthStateChange)
-    onAuthStateChange(async (event, newSession) => {
-      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && newSession?.user) {
-        sessionStorage.removeItem('join_completing_auth');
-        await completeJoinAfterAuth(invite, newSession.user);
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '發送中...';
+
+      // Magic Link 的 redirectTo 要指向 join.html 並帶 token
+      const redirectTo = `${window.location.origin}${getBaseUrl()}/join.html?token=${token}`;
+      
+      const { error: magicError } = await sendMagicLink(email, redirectTo);
+      
+      if (magicError) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '發送 Magic Link';
+        document.getElementById('email-error').textContent = '發送失敗，請檢查 Email 是否正確';
+        document.getElementById('email-error').classList.remove('hidden');
+      } else {
+        // 顯示已發送提示
+        document.getElementById('email-form').classList.add('hidden');
+        document.getElementById('email-sent').classList.remove('hidden');
       }
     });
   }
+
+  // 監聽 Auth 狀態變化（Magic Link 回調）
+  onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session?.user) {
+      const storedToken = sessionStorage.getItem('invite_token');
+      if (!storedToken) return;
+
+      // 重新取得邀請資訊
+      const { data: freshInvite } = await getInviteInfo(storedToken);
+      if (!freshInvite) return;
+
+      const alreadyMember = await checkAlreadyMember(freshInvite.trip_id, session.user.id);
+      if (alreadyMember) {
+        sessionStorage.removeItem('invite_token');
+        showSuccess(freshInvite.trip_id);
+        return;
+      }
+
+      const result = await joinTrip(freshInvite, session.user.id);
+      sessionStorage.removeItem('invite_token');
+      
+      if (result.success) {
+        showSuccess(freshInvite.trip_id);
+      } else {
+        showError('加入旅程失敗：' + (result.error?.message || '未知錯誤'));
+      }
+    }
+  });
 }
 
-init();
+document.addEventListener('DOMContentLoaded', init);
