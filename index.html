@@ -1,87 +1,121 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Treat All Trips</title>
-  <link rel="stylesheet" href="css/main.css">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#667eea">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#8b1a1a" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/main.css" />
 </head>
-<body class="login-page">
+<body>
 
-  <div class="login-container">
-    <!-- Logo -->
-    <div class="login-logo">
-      <div class="logo-icon">✈️</div>
-      <h1>Treat All Trips</h1>
-      <p>你的旅行夥伴</p>
-    </div>
-
-    <!-- 登入卡片 -->
-    <div class="login-card">
-      <!-- Google 登入 -->
-      <button id="btn-google-login" class="btn-google">
-        <svg width="20" height="20" viewBox="0 0 24 24">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-        </svg>
-        使用 Google 帳號登入
-      </button>
-
-      <div class="divider"><span>或</span></div>
-
-      <!-- Email 登入 -->
-      <div id="email-login-form">
-        <input 
-          type="email" 
-          id="input-email" 
-          placeholder="電子郵件" 
-          class="input-field"
-          autocomplete="email"
-        >
-        <input 
-          type="password" 
-          id="input-password" 
-          placeholder="密碼" 
-          class="input-field"
-          autocomplete="current-password"
-        >
-        <button id="btn-email-login" class="btn-primary">登入</button>
-        <button id="btn-email-signup" class="btn-secondary">註冊新帳號</button>
+  <!-- ========== 登入畫面 ========== -->
+  <div id="auth-screen" class="screen" style="display:none;">
+    <div class="auth-container">
+      
+      <div class="auth-logo">
+        <div class="auth-logo-icon">✈️</div>
+        <h1 class="auth-title">Treat All Trips</h1>
+        <p class="auth-subtitle">與重要的人，記錄每一段旅程</p>
       </div>
 
-      <!-- 錯誤訊息 -->
-      <div id="login-error" class="error-msg" style="display:none"></div>
-      <!-- 載入中 -->
-      <div id="login-loading" class="loading-spinner" style="display:none">
-        <div class="spinner"></div>
-        <span>登入中...</span>
-      </div>
-    </div>
+      <!-- Magic Link 表單 -->
+      <div id="magic-link-form" class="auth-card">
+        <h2 class="auth-card-title">登入 / 註冊</h2>
+        <p class="auth-card-desc">輸入 Email，我們將發送登入連結</p>
+        
+        <div class="form-group">
+          <label class="form-label">電子郵件</label>
+          <input 
+            type="email" 
+            id="auth-email" 
+            class="form-input" 
+            placeholder="your@email.com"
+            autocomplete="email"
+          />
+        </div>
 
-    <!-- 我的行程列表（登入後顯示） -->
-    <div id="my-trips-section" style="display:none">
-      <h2 class="section-title">我的行程</h2>
-      <div id="trips-list" class="trips-list">
-        <!-- 動態載入 -->
-      </div>
-      <!-- Platform Admin 才看到 -->
-      <div id="admin-section" style="display:none">
-        <button id="btn-create-trip" class="btn-primary btn-full">
-          ＋ 建立新行程
+        <button id="send-magic-link-btn" class="btn btn-primary btn-full">
+          發送登入連結
         </button>
-        <a href="admin.html" class="btn-secondary btn-full text-center">
-          管理後台
-        </a>
+
+        <div id="auth-message" class="auth-message" style="display:none;"></div>
       </div>
+
+      <!-- 發送成功狀態 -->
+      <div id="magic-link-sent" class="auth-card" style="display:none;">
+        <div class="auth-sent-icon">📬</div>
+        <h2 class="auth-card-title">確認您的信箱</h2>
+        <p class="auth-card-desc">
+          登入連結已發送至<br/>
+          <strong id="sent-email-display"></strong>
+        </p>
+        <p class="auth-card-hint">點擊信中的連結即可登入，連結有效期 1 小時</p>
+        <button id="resend-btn" class="btn btn-ghost btn-full">
+          重新發送
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========== 首頁（旅行列表）========== -->
+  <div id="home-screen" class="screen" style="display:none;">
+    
+    <!-- Header -->
+    <header class="app-header">
+      <div class="app-header-inner">
+        <div class="app-header-left">
+          <h1 class="app-header-title">我的旅行</h1>
+        </div>
+        <div class="app-header-right">
+          <button id="admin-btn" class="icon-btn" style="display:none;" title="管理後台">
+            ⚙️
+          </button>
+          <button id="logout-btn" class="icon-btn" title="登出">
+            🚪
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 主內容 -->
+    <main class="home-main">
+
+      <!-- 載入中 -->
+      <div id="trips-loading" class="loading-state">
+        <div class="loading-spinner"></div>
+        <p>載入旅行中⋯</p>
+      </div>
+
+      <!-- 空狀態 -->
+      <div id="trips-empty" class="empty-state" style="display:none;">
+        <div class="empty-icon">🗺️</div>
+        <h2 class="empty-title">尚無旅行</h2>
+        <p class="empty-desc">等待旅行邀請，或請管理員建立旅行</p>
+      </div>
+
+      <!-- 旅行列表 -->
+      <div id="trips-list" class="trips-grid" style="display:none;"></div>
+
+    </main>
+
+  </div>
+
+  <!-- ========== 全頁載入遮罩 ========== -->
+  <div id="page-loading" class="page-loading">
+    <div class="page-loading-inner">
+      <div class="loading-spinner large"></div>
+      <p>載入中⋯</p>
     </div>
   </div>
 
   <script type="module" src="js/auth.js"></script>
+  <script type="module" src="js/home.js"></script>
 </body>
 </html>
