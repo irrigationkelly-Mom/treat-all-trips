@@ -1,191 +1,180 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>管理後台 - Treat All Trips</title>
-  <link rel="stylesheet" href="css/main.css">
-  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#6366f1" />
 </head>
 <body>
-  <div id="app">
 
-    <!-- 頂部導航 -->
-    <header class="app-header">
-      <div class="header-content">
-        <h1 class="header-title">⚙️ 管理後台</h1>
-        <button id="logoutBtn" class="btn btn-ghost btn-sm">登出</button>
-      </div>
-    </header>
+  <!-- 頂部導覽 -->
+  <header class="top-bar">
+    <div class="top-bar-inner">
+      <h1 class="app-title">🛫 Treat All Trips</h1>
+      <button id="logoutBtn" class="btn btn-ghost btn-sm">登出</button>
+    </div>
+  </header>
 
-    <!-- 主要內容 -->
-    <main class="main-content">
+  <main class="admin-layout">
 
-      <!-- 建立新旅行 -->
-      <section class="card mb-4">
-        <h2 class="section-title">✈️ 建立新旅行</h2>
-        
-        <form id="createTripForm">
-          <div class="form-group">
+    <!-- 左側：建立旅行 -->
+    <section class="card">
+      <h2 class="section-title">➕ 建立新旅行</h2>
+
+      <form id="createTripForm" class="form-stack">
+
+        <div class="form-row">
+          <div class="form-group" style="flex:0 0 80px">
+            <label class="form-label">Emoji</label>
+            <input type="text" id="tripEmoji" class="form-input" 
+              placeholder="✈️" maxlength="4" />
+          </div>
+          <div class="form-group" style="flex:1">
             <label class="form-label">旅行名稱 *</label>
-            <input 
-              type="text" 
-              id="tripName" 
-              class="form-input" 
-              placeholder="例如：日本東京五日遊"
-              required
-            >
+            <input type="text" id="tripName" class="form-input" 
+              placeholder="例：日本自由行2025" required />
           </div>
+        </div>
 
+        <div class="form-group">
+          <label class="form-label">目的地</label>
+          <input type="text" id="tripDestination" class="form-input" 
+            placeholder="例：東京、大阪" />
+        </div>
+
+        <div class="form-row">
           <div class="form-group">
-            <label class="form-label">旅行 Emoji</label>
-            <input 
-              type="text" 
-              id="tripEmoji" 
-              class="form-input" 
-              placeholder="🗼"
-              maxlength="2"
-            >
+            <label class="form-label">出發日期</label>
+            <input type="date" id="tripStartDate" class="form-input" />
           </div>
-
           <div class="form-group">
-            <label class="form-label">目的地</label>
-            <input 
-              type="text" 
-              id="tripDestination" 
-              class="form-input" 
-              placeholder="例如：東京，日本"
-            >
+            <label class="form-label">回程日期</label>
+            <input type="date" id="tripEndDate" class="form-input" />
           </div>
+        </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">開始日期</label>
-              <input type="date" id="tripStartDate" class="form-input">
-            </div>
-            <div class="form-group">
-              <label class="form-label">結束日期</label>
-              <input type="date" id="tripEndDate" class="form-input">
-            </div>
-          </div>
+        <div class="form-group">
+          <label class="form-label">基礎貨幣</label>
+          <select id="tripCurrency" class="form-input">
+            <option value="TWD">TWD 新台幣</option>
+            <option value="JPY">JPY 日圓</option>
+            <option value="USD">USD 美元</option>
+            <option value="EUR">EUR 歐元</option>
+            <option value="HKD">HKD 港幣</option>
+            <option value="KRW">KRW 韓元</option>
+            <option value="THB">THB 泰銖</option>
+            <option value="SGD">SGD 新幣</option>
+            <option value="GBP">GBP 英鎊</option>
+            <option value="AUD">AUD 澳幣</option>
+          </select>
+        </div>
 
-          <div class="form-group">
-            <label class="form-label">旅行幣別</label>
-            <select id="tripCurrency" class="form-input">
-              <option value="TWD">TWD - 新台幣</option>
-              <option value="JPY">JPY - 日圓</option>
-              <option value="USD">USD - 美元</option>
-              <option value="EUR">EUR - 歐元</option>
-              <option value="GBP">GBP - 英鎊</option>
-              <option value="HKD">HKD - 港幣</option>
-              <option value="KRW">KRW - 韓元</option>
-              <option value="THB">THB - 泰銖</option>
-              <option value="SGD">SGD - 新加坡幣</option>
-              <option value="AUD">AUD - 澳幣</option>
-            </select>
-          </div>
+        <div class="form-group">
+          <label class="form-label">旅行說明</label>
+          <textarea id="tripDescription" class="form-input form-textarea" 
+            placeholder="備註、說明..."></textarea>
+        </div>
 
-          <div class="form-group">
-            <label class="form-label">旅行描述</label>
-            <textarea 
-              id="tripDescription" 
-              class="form-input form-textarea" 
-              placeholder="簡單描述這次旅行..."
-              rows="3"
-            ></textarea>
-          </div>
-
-          <button type="submit" class="btn btn-primary btn-full">
-            ✈️ 建立旅行
-          </button>
-        </form>
-
-        <!-- 建立結果訊息 -->
         <div id="createTripMessage" class="message hidden"></div>
-      </section>
 
-      <!-- 我的旅行列表 -->
-      <section class="card mb-4">
-        <h2 class="section-title">📋 所有旅行</h2>
-        <div id="tripsList" class="trips-list">
-          <div class="loading-placeholder">載入中...</div>
-        </div>
-      </section>
+        <button type="submit" class="btn btn-primary btn-full">
+          ✨ 建立旅行
+        </button>
 
-    </main>
-  </div>
+      </form>
+    </section>
 
-  <!-- 邀請連結 Modal -->
-  <div id="inviteModal" class="modal hidden">
-    <div class="modal-overlay" id="modalOverlay"></div>
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 class="modal-title">🔗 邀請連結</h3>
-        <button class="modal-close" id="closeModal">✕</button>
+    <!-- 右側：旅行列表 -->
+    <section class="card">
+      <h2 class="section-title">🗺️ 我的旅行</h2>
+      <div id="tripsList">
+        <div class="loading-placeholder">載入中...</div>
       </div>
-      <div class="modal-body">
+    </section>
+
+  </main>
+
+  <!-- 邀請 Modal -->
+  <div id="inviteModal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">🔗 邀請成員</h3>
+        <button id="closeModal" class="btn-icon">✕</button>
+      </div>
+
+      <div class="form-stack">
+
         <div class="form-group">
-          <label class="form-label">成員名稱</label>
-          <input 
-            type="text" 
-            id="inviteeName" 
-            class="form-input" 
-            placeholder="輸入成員名稱"
-          >
+          <label class="form-label">受邀者姓名（選填）</label>
+          <input type="text" id="inviteeName" class="form-input" 
+            placeholder="例：小明" />
         </div>
 
         <div class="form-group">
-          <label class="form-label">權限設定</label>
-          <div class="permission-grid">
-            <label class="permission-item">
-              <input type="checkbox" id="perm_itinerary" checked> 行程
-            </label>
-            <label class="permission-item">
-              <input type="checkbox" id="perm_expense" checked> 費用
-            </label>
-            <label class="permission-item">
-              <input type="checkbox" id="perm_shopping" checked> 購物
-            </label>
-            <label class="permission-item">
-              <input type="checkbox" id="perm_info" checked> 資訊
-            </label>
-            <label class="permission-item">
-              <input type="checkbox" id="perm_tools" checked> 工具
-            </label>
-            <label class="permission-item">
-              <input type="checkbox" id="perm_memo" checked> 備忘錄
-            </label>
-            <label class="permission-item">
-              <input type="checkbox" id="perm_packing" checked> 打包清單
-            </label>
-            <label class="permission-item">
-              <input type="checkbox" id="perm_private_expense"> 私人費用
-            </label>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">連結有效期</label>
+          <label class="form-label">連結有效期限</label>
           <select id="inviteExpiry" class="form-input">
             <option value="24">24 小時</option>
             <option value="72">3 天</option>
-            <option value="168" selected>7 天</option>
+            <option value="168">7 天</option>
             <option value="720">30 天</option>
           </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">開放權限</label>
+          <div class="permission-grid">
+            <label class="perm-item">
+              <input type="checkbox" id="perm_itinerary" checked />
+              <span>📅 行程</span>
+            </label>
+            <label class="perm-item">
+              <input type="checkbox" id="perm_expense" checked />
+              <span>💰 費用</span>
+            </label>
+            <label class="perm-item">
+              <input type="checkbox" id="perm_shopping" checked />
+              <span>🛍️ 購物</span>
+            </label>
+            <label class="perm-item">
+              <input type="checkbox" id="perm_info" checked />
+              <span>ℹ️ 資訊</span>
+            </label>
+            <label class="perm-item">
+              <input type="checkbox" id="perm_tools" checked />
+              <span>🔧 工具</span>
+            </label>
+            <label class="perm-item">
+              <input type="checkbox" id="perm_memo" checked />
+              <span>📝 備忘</span>
+            </label>
+            <label class="perm-item">
+              <input type="checkbox" id="perm_packing" checked />
+              <span>🎒 行李</span>
+            </label>
+            <label class="perm-item">
+              <input type="checkbox" id="perm_private_expense" />
+              <span>🔒 私人帳</span>
+            </label>
+          </div>
         </div>
 
         <button id="generateInviteBtn" class="btn btn-primary btn-full">
           🔗 生成邀請連結
         </button>
 
-        <div id="inviteLinkResult" class="hidden">
+        <div id="inviteLinkResult" class="invite-result hidden">
+          <p class="form-label">邀請連結：</p>
           <div class="invite-link-box">
-            <p class="invite-link-text" id="inviteLinkText"></p>
-            <button id="copyInviteLink" class="btn btn-secondary btn-sm">
-              📋 複製
-            </button>
+            <span id="inviteLinkText" class="invite-link-text"></span>
           </div>
+          <button id="copyInviteLink" class="btn btn-secondary btn-full">
+            📋 複製
+          </button>
         </div>
+
       </div>
     </div>
   </div>
