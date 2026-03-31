@@ -15,20 +15,20 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --teal-700: #2c7a7b;
-      --teal-600: #38a169;
-      --teal-500: #4fd1c5;
-      --teal-100: #e6fffa;
+      --teal-700:  #2c7a7b;
+      --teal-600:  #38a169;
+      --teal-500:  #4fd1c5;
+      --teal-100:  #e6fffa;
       --amber-400: #f6ad55;
       --amber-500: #ed8936;
-      --gray-50:  #f9fafb;
-      --gray-100: #f3f4f6;
-      --gray-200: #e5e7eb;
-      --gray-400: #9ca3af;
-      --gray-500: #6b7280;
-      --gray-700: #374151;
-      --gray-900: #111827;
-      --white:    #ffffff;
+      --gray-50:   #f9fafb;
+      --gray-100:  #f3f4f6;
+      --gray-200:  #e5e7eb;
+      --gray-400:  #9ca3af;
+      --gray-500:  #6b7280;
+      --gray-700:  #374151;
+      --gray-900:  #111827;
+      --white:     #ffffff;
       --shadow-sm: 0 1px 3px rgba(0,0,0,.08);
       --shadow-md: 0 4px 12px rgba(0,0,0,.12);
       --radius-sm: 8px;
@@ -36,6 +36,19 @@
       --radius-lg: 20px;
       --tab-bar-h: 64px;
       --header-h:  260px;
+
+      /* Category colours */
+      --cat-sight:     #4a7a8a;
+      --cat-food:      #8b1a1a;
+      --cat-transport: #5a3d7a;
+      --cat-hotel:     #3d4e7a;
+      --cat-shop:      #7a4a2e;
+      --cat-other:     #4a6a4a;
+
+      /* Palette aliases */
+      --moss: #2d4a2e;
+      --beni: #8b1a1a;
+      --gold: #b8924a;
     }
 
     html, body {
@@ -86,13 +99,13 @@
 
     .error-icon {
       width: 56px; height: 56px;
-      background: #fff5f5;
-      border-radius: 50%;
+      background: #fff5f5; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       color: #e53e3e;
     }
-    .error-title  { font-size: 18px; font-weight: 700; color: var(--gray-900); }
-    .error-msg    { font-size: 14px; color: var(--gray-500); max-width: 280px; line-height: 1.6; }
+    .error-title { font-size: 18px; font-weight: 700; color: var(--gray-900); }
+    .error-msg   { font-size: 14px; color: var(--gray-500);
+                   max-width: 280px; line-height: 1.6; }
 
     .btn-back {
       margin-top: 8px;
@@ -110,7 +123,8 @@
     #app {
       display: none;
       flex-direction: column;
-      min-height: 100vh;
+      height: 100vh;          /* full viewport */
+      overflow: hidden;       /* children scroll individually */
     }
     #app.visible { display: flex; }
 
@@ -132,19 +146,14 @@
     }
     #header-cover.loaded { opacity: 1; }
 
-    /* 漸層遮罩 */
     #trip-header::after {
       content: '';
       position: absolute; inset: 0;
-      background: linear-gradient(
-        to bottom,
-        rgba(0,0,0,.15) 0%,
-        rgba(0,0,0,.55) 100%
-      );
+      background: linear-gradient(to bottom,
+        rgba(0,0,0,.15) 0%, rgba(0,0,0,.55) 100%);
       pointer-events: none;
     }
 
-    /* 頂部工具列 */
     .header-toolbar {
       position: absolute; top: 0; left: 0; right: 0;
       display: flex; align-items: center; justify-content: space-between;
@@ -160,19 +169,16 @@
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       color: var(--white);
-      cursor: pointer; border: none;
+      cursor: pointer;
       transition: background .2s;
     }
     .header-icon-btn:hover { background: rgba(255,255,255,.28); }
-
     .header-right-actions { display: flex; gap: 8px; }
 
-    /* 行程資訊區 */
     .header-info {
       position: absolute; bottom: 0; left: 0; right: 0;
       padding: 16px 20px 20px;
-      z-index: 2;
-      color: var(--white);
+      z-index: 2; color: var(--white);
     }
 
     .trip-emoji-badge {
@@ -201,34 +207,29 @@
 
     .trip-meta-item {
       display: flex; align-items: center; gap: 4px;
-      font-size: 12px;
-      color: rgba(255,255,255,.88);
+      font-size: 12px; color: rgba(255,255,255,.88);
     }
-    /* lucide icon 在 meta-item 中的大小 */
     .trip-meta-item svg { width: 13px; height: 13px; flex-shrink: 0; }
 
     .status-badge {
       display: inline-flex; align-items: center; gap: 4px;
-      padding: 3px 9px;
-      border-radius: 99px;
-      font-size: 11px; font-weight: 700;
-      letter-spacing: .03em;
+      padding: 3px 9px; border-radius: 99px;
+      font-size: 11px; font-weight: 700; letter-spacing: .03em;
     }
     .status-badge svg { width: 11px; height: 11px; }
-
     .status-planning  { background: rgba(246,173,85,.25); color: #f6ad55; }
-    .status-active    { background: rgba(72,187,120,.25); color: #68d391; }
+    .status-active    { background: rgba(72,187,120,.25);  color: #68d391; }
     .status-completed { background: rgba(160,174,192,.25); color: #a0aec0; }
     .status-cancelled { background: rgba(252,129,74,.25);  color: #fc814a; }
 
-    /* ── Tab Navigation ───────────────────────────────────────── */
+    /* ── Tab Navigation Bar ───────────────────────────────────── */
     #tab-bar {
-      position: sticky; top: 0; z-index: 100;
       display: flex;
       background: var(--white);
       border-bottom: 1px solid var(--gray-200);
       box-shadow: var(--shadow-sm);
       height: var(--tab-bar-h);
+      flex-shrink: 0;
       overflow-x: auto;
       scrollbar-width: none;
     }
@@ -240,21 +241,16 @@
       align-items: center; justify-content: center;
       gap: 3px;
       border: none; background: transparent;
-      cursor: pointer;
-      padding: 8px 4px;
+      cursor: pointer; padding: 8px 4px;
       position: relative;
       color: var(--gray-400);
       transition: color .2s;
       font-family: inherit;
     }
-
-    .tab-btn svg { width: 22px; height: 22px; transition: color .2s; }
-
+    .tab-btn svg { width: 22px; height: 22px; }
     .tab-btn .tab-label {
-      font-size: 10px; font-weight: 600;
-      letter-spacing: .02em;
+      font-size: 10px; font-weight: 600; letter-spacing: .02em;
     }
-
     .tab-btn::after {
       content: '';
       position: absolute; bottom: 0; left: 10%; right: 10%;
@@ -264,83 +260,645 @@
       transform: scaleX(0);
       transition: transform .25s ease;
     }
+    .tab-btn.active          { color: var(--teal-700); }
+    .tab-btn.active::after   { transform: scaleX(1); }
 
-    .tab-btn.active {
-      color: var(--teal-700);
-    }
-    .tab-btn.active::after { transform: scaleX(1); }
-
-    /* ── Tab Panels ───────────────────────────────────────────── */
+    /* ── Tab Content Area ─────────────────────────────────────── */
     #tab-content {
       flex: 1;
       overflow-y: auto;
-      padding: 20px 16px calc(var(--tab-bar-h) + 20px);
+      -webkit-overflow-scrolling: touch;
+      background: var(--gray-50);
     }
 
-    .tab-panel { display: none; }
+    .tab-panel { display: none; padding: 16px 16px 32px; }
     .tab-panel.active { display: block; }
 
-    /* 空狀態卡片 */
-    .empty-state {
+    /* ── Shared Utilities ─────────────────────────────────────── */
+    .hidden { display: none !important; }
+
+    /* Buttons */
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 8px 14px;
+      background: var(--teal-700); color: var(--white);
+      border: none; border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      font-family: inherit;
+      transition: background .2s;
+    }
+    .btn-primary:hover { background: #285e61; }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 7px 12px;
+      background: transparent; color: var(--gray-600, #4b5563);
+      border: 1px solid var(--gray-200); border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      font-family: inherit;
+      transition: background .2s, border-color .2s;
+    }
+    .btn-ghost:hover { background: var(--gray-100); }
+
+    .btn-sm { padding: 6px 10px; font-size: 12px; }
+
+    /* Section Headers */
+    .section-header {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .section-title {
+      font-size: 13px; font-weight: 700;
+      color: var(--gray-500);
+      text-transform: uppercase; letter-spacing: .06em;
+    }
+    .section-title-icon {
+      display: flex; align-items: center; gap: 6px;
+      color: var(--gray-700);
+    }
+    .section-title-icon .section-title { color: var(--gray-700); }
+    .section-actions { display: flex; gap: 6px; }
+
+    /* Cat bar & tag */
+    .cat-bar {
+      width: 4px; border-radius: 4px 0 0 4px; flex-shrink: 0;
+    }
+    .cat-tag {
+      display: inline-flex; align-items: center;
+      padding: 2px 7px; border-radius: 99px;
+      font-size: 10px; font-weight: 700; letter-spacing: .04em;
+    }
+
+    /* Category colour map — applied by JS via data-category */
+    [data-category="sightseeing"] .cat-bar,
+    [data-category="sightseeing"] .cat-tag { background: var(--cat-sight); }
+    [data-category="sightseeing"] .cat-tag  { color: #fff; }
+
+    [data-category="food"] .cat-bar,
+    [data-category="food"] .cat-tag { background: var(--cat-food); }
+    [data-category="food"] .cat-tag  { color: #fff; }
+
+    [data-category="transport"] .cat-bar,
+    [data-category="transport"] .cat-tag { background: var(--cat-transport); }
+    [data-category="transport"] .cat-tag  { color: #fff; }
+
+    [data-category="hotel"] .cat-bar,
+    [data-category="hotel"] .cat-tag { background: var(--cat-hotel); }
+    [data-category="hotel"] .cat-tag  { color: #fff; }
+
+    [data-category="shopping"] .cat-bar,
+    [data-category="shopping"] .cat-tag { background: var(--cat-shop); }
+    [data-category="shopping"] .cat-tag  { color: #fff; }
+
+    [data-category="other"] .cat-bar,
+    [data-category="other"] .cat-tag { background: var(--cat-other); }
+    [data-category="other"] .cat-tag  { color: #fff; }
+
+    /* Skeleton */
+    .skeleton-chip, .tl-card-skeleton {
+      background: var(--gray-200);
+      border-radius: var(--radius-sm);
+      animation: shimmer 1.4s ease infinite;
+    }
+    .skeleton-chip   { width: 72px; height: 44px; border-radius: 22px; }
+    .tl-card-skeleton {
+      height: 80px; margin-bottom: 10px;
+      border-radius: var(--radius-md);
+    }
+    @keyframes shimmer {
+      0%,100% { opacity: 1; } 50% { opacity: .45; }
+    }
+
+    /* Empty States */
+    .timeline-empty {
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      min-height: 240px; gap: 12px;
-      text-align: center;
-      padding: 32px 16px;
+      min-height: 200px; gap: 12px;
+      text-align: center; padding: 32px 16px;
+      color: var(--gray-400);
     }
-    .empty-icon {
-      width: 64px; height: 64px;
-      background: var(--teal-100);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      color: var(--teal-700);
-    }
-    .empty-icon svg { width: 30px; height: 30px; }
-    .empty-title { font-size: 16px; font-weight: 700; color: var(--gray-700); }
-    .empty-desc  { font-size: 13px; color: var(--gray-400); line-height: 1.6; max-width: 220px; }
+    .timeline-empty p { font-size: 14px; }
 
-    /* 通用卡片 */
-    .card {
+    /* ══════════════════════════════════════════════════════
+       TAB 1 — ITINERARY
+       ══════════════════════════════════════════════════════ */
+
+    /* Day Selector Strip */
+    .day-strip-wrap {
+      margin: 0 -16px 14px;       /* bleed to edge */
+      padding: 0 16px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .day-strip-wrap::-webkit-scrollbar { display: none; }
+
+    .day-strip {
+      display: flex; gap: 8px;
+      padding: 4px 0 8px;
+    }
+
+    .day-chip {
+      display: flex; flex-direction: column;
+      align-items: center;
+      padding: 7px 14px;
+      border-radius: 22px;
+      border: 1.5px solid var(--gray-200);
+      background: var(--white);
+      cursor: pointer;
+      font-family: inherit;
+      transition: all .2s;
+      white-space: nowrap;
+    }
+    .day-chip .chip-day  { font-size: 12px; font-weight: 700; color: var(--gray-700); }
+    .day-chip .chip-date { font-size: 10px; color: var(--gray-400); }
+    .day-chip.active {
+      background: var(--teal-700); border-color: var(--teal-700);
+    }
+    .day-chip.active .chip-day,
+    .day-chip.active .chip-date { color: var(--white); }
+
+    /* Day Header */
+    .day-header {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .day-header-left { display: flex; align-items: baseline; gap: 8px; }
+    .day-number { font-size: 18px; font-weight: 800; color: var(--gray-900); }
+    .day-date   { font-size: 13px; color: var(--gray-400); }
+
+    /* Timeline Cards */
+    .timeline { display: flex; flex-direction: column; gap: 0; }
+
+    .tl-card {
+      display: flex;
+      background: var(--white);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-200);
+      margin-bottom: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: box-shadow .2s, transform .15s;
+    }
+    .tl-card:active { transform: scale(.99); }
+    .tl-card:hover  { box-shadow: var(--shadow-md); }
+
+    .tl-card-body {
+      display: flex; align-items: stretch;
+      flex: 1; padding: 12px 10px 12px 12px; gap: 10px;
+    }
+
+    .tl-card-time {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 3px;
+      min-width: 38px; padding-top: 2px;
+      color: var(--gray-400);
+    }
+    .tl-time-text {
+      font-size: 11px; font-weight: 600;
+      color: var(--gray-500); text-align: center;
+    }
+
+    .tl-card-main { flex: 1; min-width: 0; }
+    .tl-card-top  {
+      display: flex; align-items: center; gap: 6px;
+      margin-bottom: 4px; flex-wrap: wrap;
+    }
+    .tl-card-title {
+      font-size: 14px; font-weight: 700;
+      color: var(--gray-900);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .tl-card-desc {
+      font-size: 12px; color: var(--gray-500);
+      line-height: 1.5; margin-bottom: 6px;
+    }
+    .tl-card-meta {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .tl-meta-item {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 11px; color: var(--gray-400);
+    }
+    .tl-card-arrow {
+      display: flex; align-items: center;
+      border: none; background: transparent;
+      color: var(--gray-300); cursor: pointer;
+      padding: 0 2px; flex-shrink: 0;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       TAB 2 — EXPENSE
+       ══════════════════════════════════════════════════════ */
+
+    .expense-summary-card {
       background: var(--white);
       border-radius: var(--radius-md);
       box-shadow: var(--shadow-sm);
       border: 1px solid var(--gray-200);
       padding: 16px;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
     }
-    .card-title {
-      font-size: 13px; font-weight: 700;
-      color: var(--gray-500);
-      text-transform: uppercase;
-      letter-spacing: .06em;
-      margin-bottom: 12px;
-      display: flex; align-items: center; gap: 6px;
+    .exp-sum-row {
+      display: flex; align-items: center;
+      gap: 8px; margin-bottom: 6px;
     }
-    .card-title svg { width: 14px; height: 14px; }
+    .exp-sum-row.exp-sum-sub { font-size: 12px; }
+    .exp-sum-label   { font-size: 13px; color: var(--gray-500); }
+    .exp-sum-total   { font-size: 24px; font-weight: 800;
+                       color: var(--gray-900); margin-left: auto; }
+    .exp-sum-settled { font-weight: 700; color: var(--teal-700); }
+    .exp-sum-pending { font-weight: 700; color: var(--amber-500); }
+    .exp-sum-divider { color: var(--gray-300); }
 
-    /* ── 權限提示橫幅 ─────────────────────────────────────────── */
+    .exp-bar-wrap  { margin: 10px 0 6px; }
+    .exp-bar-track {
+      height: 6px; background: var(--gray-100);
+      border-radius: 99px; overflow: hidden;
+    }
+    .exp-bar-fill {
+      height: 100%; background: var(--teal-700);
+      border-radius: 99px; transition: width .6s ease;
+    }
+
+    .exp-persons {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      margin-top: 10px;
+    }
+    .exp-person-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: 99px;
+      background: var(--gray-100);
+      font-size: 11px; font-weight: 600; color: var(--gray-700);
+    }
+
+    .exp-categories { display: flex; flex-direction: column; gap: 8px;
+                      margin-bottom: 4px; }
+    .exp-cat-row {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .exp-cat-row.skeleton-row {
+      height: 32px; border-radius: var(--radius-sm);
+      animation: shimmer 1.4s ease infinite;
+      background: var(--gray-200);
+    }
+    .exp-cat-label { font-size: 12px; color: var(--gray-600, #4b5563);
+                     min-width: 48px; }
+    .exp-cat-bar-wrap { flex: 1; }
+    .exp-cat-bar {
+      height: 8px; border-radius: 99px;
+      background: var(--teal-500);
+      transition: width .5s ease;
+    }
+    .exp-cat-amount {
+      font-size: 12px; font-weight: 700;
+      color: var(--gray-700); min-width: 56px; text-align: right;
+    }
+
+    /* Expense list card */
+    .expense-list { display: flex; flex-direction: column; gap: 0; }
+
+    .exp-card {
+      display: flex;
+      background: var(--white);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-200);
+      margin-bottom: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: box-shadow .2s;
+    }
+    .exp-card:hover { box-shadow: var(--shadow-md); }
+
+    .exp-card-body {
+      display: flex; align-items: center;
+      flex: 1; padding: 12px; gap: 10px;
+    }
+    .exp-card-left  {
+      display: flex; flex-direction: column;
+      gap: 3px; flex: 1; min-width: 0;
+    }
+    .exp-card-title { font-size: 14px; font-weight: 700; color: var(--gray-900); }
+    .exp-card-date  { font-size: 11px; color: var(--gray-400); }
+    .exp-card-right {
+      display: flex; flex-direction: column;
+      align-items: flex-end; gap: 4px; flex-shrink: 0;
+    }
+    .exp-card-amount {
+      font-size: 15px; font-weight: 800; color: var(--gray-900);
+    }
+    .exp-card-payer {
+      display: flex; align-items: center; gap: 3px;
+      font-size: 11px; color: var(--gray-400);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       TAB 3 — SHOPPING
+       ══════════════════════════════════════════════════════ */
+
+    .shop-summary-card {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-200);
+      padding: 16px; margin-bottom: 16px;
+    }
+    .shop-sum-row {
+      display: flex; align-items: center; gap: 0;
+    }
+    .shop-sum-stat {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; gap: 2px;
+    }
+    .shop-sum-num   { font-size: 28px; font-weight: 800; color: var(--gray-900); }
+    .shop-sum-label { font-size: 11px; color: var(--gray-400); }
+    .shop-checked   { color: var(--moss); }
+    .shop-unchecked { color: var(--amber-500); }
+    .shop-sum-divider-v {
+      width: 1px; height: 40px; background: var(--gray-200);
+    }
+
+    /* Filter strip (shared by Shopping & PAS) */
+    .shop-filter-strip {
+      display: flex; gap: 6px; overflow-x: auto;
+      scrollbar-width: none; padding-bottom: 2px;
+      margin-bottom: 12px;
+    }
+    .shop-filter-strip::-webkit-scrollbar { display: none; }
+    .shop-filter-btn {
+      padding: 5px 13px; border-radius: 99px;
+      border: 1.5px solid var(--gray-200);
+      background: var(--white);
+      font-size: 12px; font-weight: 600;
+      color: var(--gray-500); cursor: pointer;
+      font-family: inherit; white-space: nowrap;
+      transition: all .2s;
+    }
+    .shop-filter-btn.active {
+      background: var(--teal-700); border-color: var(--teal-700);
+      color: var(--white);
+    }
+
+    /* Shop list item */
+    .shop-list { display: flex; flex-direction: column; gap: 0; }
+
+    .shop-item {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--white);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-200);
+      padding: 12px 10px 12px 12px;
+      margin-bottom: 8px;
+      transition: opacity .2s;
+    }
+    .shop-item[data-checked="true"] { opacity: .55; }
+
+    .shop-check-btn {
+      width: 36px; height: 36px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      border: none; background: transparent; cursor: pointer;
+      color: var(--gray-300); transition: color .2s;
+    }
+    .shop-check-btn[aria-pressed="true"] { color: var(--moss); }
+    .icon-checked { color: var(--moss); }
+
+    .shop-item-body { flex: 1; min-width: 0; }
+    .shop-item-name {
+      font-size: 14px; font-weight: 700; color: var(--gray-900);
+      display: block; margin-bottom: 4px;
+    }
+    .shop-item[data-checked="true"] .shop-item-name {
+      text-decoration: line-through; color: var(--gray-400);
+    }
+    .shop-item-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .shop-item-price,
+    .shop-item-store {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 11px; color: var(--gray-400);
+    }
+
+    .shop-item-more {
+      width: 32px; height: 32px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      border: none; background: transparent; cursor: pointer;
+      color: var(--gray-300);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       TAB 4 — INFO
+       ══════════════════════════════════════════════════════ */
+
+    .info-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .info-card {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--white);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-200);
+      padding: 12px 14px;
+    }
+    .info-card-icon {
+      width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .info-card-body { flex: 1; min-width: 0; }
+    .info-card-title {
+      font-size: 14px; font-weight: 700; color: var(--gray-900);
+      display: block;
+    }
+    .info-card-sub {
+      font-size: 12px; color: var(--gray-400); display: block;
+    }
+    .info-card-action {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--gray-100);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--gray-600, #4b5563);
+      text-decoration: none; flex-shrink: 0;
+      transition: background .2s;
+    }
+    .info-card-action:hover { background: var(--gray-200); }
+
+    /* Notes card */
+    .info-notes-card {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-200);
+      overflow: hidden;
+    }
+    .notes-textarea {
+      width: 100%; resize: vertical;
+      border: none; outline: none;
+      padding: 14px 16px;
+      font-size: 14px; line-height: 1.7;
+      color: var(--gray-900);
+      font-family: inherit;
+      background: transparent;
+    }
+    .notes-footer {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-top: 1px solid var(--gray-100);
+    }
+    .notes-saved-hint { font-size: 11px; color: var(--gray-400); }
+
+    /* ══════════════════════════════════════════════════════
+       TAB 5 — TOOLS
+       ══════════════════════════════════════════════════════ */
+
+    /* Currency Converter */
+    .currency-card {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-200);
+      padding: 16px; margin-bottom: 16px;
+    }
+    .currency-row {
+      display: flex; align-items: flex-end; gap: 10px;
+    }
+    .currency-field { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .currency-label {
+      font-size: 11px; font-weight: 700; color: var(--gray-400);
+      text-transform: uppercase; letter-spacing: .06em;
+    }
+    .currency-input-wrap {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .currency-select {
+      border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm);
+      padding: 8px 10px; font-size: 14px; font-weight: 700;
+      color: var(--gray-900); background: var(--gray-50);
+      font-family: inherit; cursor: pointer;
+    }
+    .currency-input {
+      border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm);
+      padding: 10px 12px; font-size: 20px; font-weight: 700;
+      color: var(--gray-900); background: var(--white);
+      font-family: inherit; width: 100%;
+    }
+    .currency-input:focus { outline: none; border-color: var(--teal-700); }
+    .currency-input[readonly] { background: var(--gray-50); color: var(--teal-700); }
+
+    .currency-swap-btn {
+      width: 42px; height: 42px; flex-shrink: 0;
+      border: 1.5px solid var(--gray-200); border-radius: 50%;
+      background: var(--white); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--gray-500); margin-bottom: 6px;
+      transition: all .2s;
+    }
+    .currency-swap-btn:hover {
+      background: var(--teal-700); border-color: var(--teal-700);
+      color: var(--white);
+    }
+
+    .currency-rate-row {
+      display: flex; align-items: center; gap: 5px;
+      margin-top: 12px; padding-top: 10px;
+      border-top: 1px solid var(--gray-100);
+      font-size: 12px; color: var(--gray-400);
+    }
+
+    .rate-updated-hint { font-size: 11px; color: var(--gray-400); }
+
+    /* Point & Speak Cards */
+    .pas-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (min-width: 400px) {
+      .pas-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    .pas-card {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-200);
+      padding: 14px 12px 10px;
+      display: flex; flex-direction: column; gap: 4px;
+      cursor: pointer;
+      transition: box-shadow .2s;
+    }
+    .pas-card:hover { box-shadow: var(--shadow-md); }
+
+    .pas-card-local {
+      font-size: 13px; font-weight: 700; color: var(--gray-900);
+      line-height: 1.4;
+    }
+    .pas-card-target {
+      font-size: 12px; color: var(--teal-700);
+      font-weight: 600; line-height: 1.4;
+    }
+    .pas-card-phonetic {
+      font-size: 10px; color: var(--gray-400); line-height: 1.4;
+    }
+
+    .pas-card-actions {
+      display: flex; gap: 6px;
+      margin-top: 8px; justify-content: flex-end;
+    }
+
+    .pas-speak-btn, .pas-edit-btn {
+      width: 30px; height: 30px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 50%; background: var(--white);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--gray-500);
+      transition: all .2s;
+    }
+    .pas-speak-btn:hover {
+      background: var(--teal-700); border-color: var(--teal-700);
+      color: var(--white);
+    }
+    .pas-speak-btn { align-self: flex-end; margin-top: auto; }
+
+    /* GPS Float Bar */
+    .gps-float-bar {
+      position: fixed; bottom: calc(var(--tab-bar-h) + 12px);
+      left: 16px; right: 16px; z-index: 200;
+      background: rgba(28,28,30,.88);
+      backdrop-filter: blur(10px);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+    }
+    .gps-bar-inner {
+      display: flex; align-items: center; gap: 10px;
+      color: var(--white); font-size: 13px;
+    }
+    #gpsCoords { flex: 1; font-family: monospace; font-size: 12px; }
+
+    /* Permission banner */
     .permission-banner {
       display: flex; align-items: center; gap: 10px;
       padding: 12px 16px;
-      background: #fffbeb;
-      border: 1px solid #fcd34d;
+      background: #fffbeb; border: 1px solid #fcd34d;
       border-radius: var(--radius-sm);
       margin-bottom: 16px;
       font-size: 13px; color: #92400e;
     }
-    .permission-banner svg { width: 16px; height: 16px; flex-shrink: 0; color: #f59e0b; }
+    .permission-banner svg { width: 16px; height: 16px; flex-shrink: 0; }
   </style>
 </head>
 
 <body>
 
-<!-- ① Loading Overlay ──────────────────────────────────────────── -->
+<!-- ① Loading Overlay ────────────────────────────────────────── -->
 <div id="loading-overlay">
   <div class="loading-spinner"></div>
   <p class="loading-text">行程資料載入中…</p>
 </div>
 
-<!-- ② Error Screen ─────────────────────────────────────────────── -->
+<!-- ② Error Screen ───────────────────────────────────────────── -->
 <div id="error-screen">
   <div class="error-icon">
     <i data-lucide="triangle-alert" style="width:28px;height:28px;"></i>
@@ -353,14 +911,13 @@
   </a>
 </div>
 
-<!-- ③ App Shell ─────────────────────────────────────────────────── -->
+<!-- ③ App Shell ──────────────────────────────────────────────── -->
 <div id="app">
 
-  <!-- Hero Header -->
+  <!-- ── Hero Header ── -->
   <header id="trip-header">
     <div id="header-cover"></div>
 
-    <!-- 頂部工具列 -->
     <div class="header-toolbar">
       <button class="header-icon-btn" onclick="history.back()" title="返回">
         <i data-lucide="arrow-left" style="width:18px;height:18px;"></i>
@@ -369,13 +926,13 @@
         <button class="header-icon-btn" id="btn-share" title="分享行程">
           <i data-lucide="share-2" style="width:18px;height:18px;"></i>
         </button>
-        <button class="header-icon-btn" id="btn-edit" title="編輯行程" style="display:none;">
+        <button class="header-icon-btn" id="btn-edit" title="編輯行程"
+                style="display:none;">
           <i data-lucide="pencil" style="width:18px;height:18px;"></i>
         </button>
       </div>
     </div>
 
-    <!-- 行程資訊 -->
     <div class="header-info">
       <div class="trip-emoji-badge" id="trip-emoji">✈️</div>
       <h1 id="trip-name">行程名稱</h1>
@@ -395,808 +952,843 @@
       </div>
     </div>
   </header>
-  <!-- ============================================================
-     STEP B — MAIN CONTENT AREA
-     插入位置：Step A </header> 之後，</body> 之前
-     ============================================================ -->
 
-<main class="trip-main" id="tripMain">
-
-  <!-- ── TAB NAVIGATION ── -->
-  <nav class="tab-nav" id="tabNav" role="tablist">
-    <button class="tab-btn active" role="tab" data-tab="itinerary" aria-selected="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-        <line x1="16" y1="2" x2="16" y2="6"/>
-        <line x1="8" y1="2" x2="8" y2="6"/>
-        <line x1="3" y1="10" x2="21" y2="10"/>
-      </svg>
-      <span>行程</span>
+  <!-- ── Tab Navigation Bar ── -->
+  <nav id="tab-bar" role="tablist">
+    <button class="tab-btn active" role="tab" data-tab="itinerary"
+            aria-selected="true">
+      <i data-lucide="map" style="width:22px;height:22px;"></i>
+      <span class="tab-label">行程</span>
     </button>
-    <button class="tab-btn" role="tab" data-tab="expense" aria-selected="false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="12" y1="1" x2="12" y2="23"/>
-        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-      </svg>
-      <span>支出</span>
+    <button class="tab-btn" role="tab" data-tab="expense"
+            aria-selected="false">
+      <i data-lucide="wallet" style="width:22px;height:22px;"></i>
+      <span class="tab-label">費用</span>
     </button>
-    <button class="tab-btn" role="tab" data-tab="shopping" aria-selected="false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-        <line x1="3" y1="6" x2="21" y2="6"/>
-        <path d="M16 10a4 4 0 0 1-8 0"/>
-      </svg>
-      <span>購物</span>
+    <button class="tab-btn" role="tab" data-tab="shopping"
+            aria-selected="false">
+      <i data-lucide="shopping-bag" style="width:22px;height:22px;"></i>
+      <span class="tab-label">購物</span>
     </button>
-    <button class="tab-btn" role="tab" data-tab="info" aria-selected="false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="12" y1="8" x2="12" y2="12"/>
-        <line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
-      <span>資訊</span>
+    <button class="tab-btn" role="tab" data-tab="info"
+            aria-selected="false">
+      <i data-lucide="info" style="width:22px;height:22px;"></i>
+      <span class="tab-label">資訊</span>
     </button>
-    <button class="tab-btn" role="tab" data-tab="tools" aria-selected="false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-      </svg>
-      <span>工具</span>
+    <button class="tab-btn" role="tab" data-tab="tools"
+            aria-selected="false">
+      <i data-lucide="wrench" style="width:22px;height:22px;"></i>
+      <span class="tab-label">工具</span>
     </button>
   </nav>
 
-  <!-- ════════════════════════════════════════════════════
-       TAB PANEL 1 — 行程 ITINERARY
-       ════════════════════════════════════════════════════ -->
-  <section class="tab-panel active" id="panel-itinerary" role="tabpanel">
+  <!-- ── Tab Content ── -->
+  <main id="tab-content">
 
-    <!-- Day Selector Strip -->
-    <div class="day-strip-wrap">
-      <div class="day-strip" id="dayStrip">
-        <!-- JS 動態產生：<button class="day-chip [active]">Day 1<span>3/20</span></button> -->
-        <div class="day-strip-loading">
-          <div class="skeleton-chip"></div>
-          <div class="skeleton-chip"></div>
-          <div class="skeleton-chip"></div>
+    <!-- ════════════════════════════════════════
+         PANEL 1 — 行程 ITINERARY
+         ════════════════════════════════════════ -->
+    <section class="tab-panel active" id="panel-itinerary" role="tabpanel"
+             aria-labelledby="tab-itinerary">
+
+      <!-- Day Selector Strip -->
+      <div class="day-strip-wrap">
+        <div class="day-strip" id="dayStrip">
+          <!-- Skeleton while loading -->
+          <div class="day-strip-loading" id="dayStripSkeleton">
+            <div class="skeleton-chip"></div>
+            <div class="skeleton-chip"></div>
+            <div class="skeleton-chip"></div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Day Header -->
-    <div class="day-header" id="dayHeader">
-      <div class="day-header-left">
-        <span class="day-number" id="dayNumber">Day 1</span>
-        <span class="day-date" id="dayDate">—</span>
-      </div>
-      <button class="btn-ghost btn-sm" id="btnAddEvent">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="8" x2="12" y2="16"/>
-          <line x1="8" y1="12" x2="16" y2="12"/>
-        </svg>
-        新增事件
-      </button>
-    </div>
-
-    <!-- Timeline -->
-    <div class="timeline" id="timeline">
-      <!-- JS 動態產生 timeline cards -->
-
-      <!-- ── SKELETON (loading state) ── -->
-      <div class="tl-skeleton" id="timelineSkeleton">
-        <div class="tl-card-skeleton"></div>
-        <div class="tl-card-skeleton"></div>
-        <div class="tl-card-skeleton"></div>
+      <!-- Day Header -->
+      <div class="day-header" id="dayHeader">
+        <div class="day-header-left">
+          <span class="day-number" id="dayNumber">Day 1</span>
+          <span class="day-date"   id="dayDate">—</span>
+        </div>
+        <button class="btn-ghost btn-sm" id="btnAddEvent">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+               width="15" height="15">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="16"/>
+            <line x1="8" y1="12" x2="16" y2="12"/>
+          </svg>
+          新增事件
+        </button>
       </div>
 
-      <!-- ── EMPTY STATE ── -->
-      <div class="timeline-empty hidden" id="timelineEmpty">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="48" height="48">
-          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-          <line x1="16" y1="2" x2="16" y2="6"/>
-          <line x1="8" y1="2" x2="8" y2="6"/>
-          <line x1="3" y1="10" x2="21" y2="10"/>
-        </svg>
-        <p>這天還沒有行程</p>
-        <button class="btn-primary btn-sm" id="btnAddEventEmpty">新增第一個事件</button>
-      </div>
-    </div>
+      <!-- Timeline -->
+      <div class="timeline" id="timeline">
 
-    <!-- ── SAMPLE TIMELINE CARD (for reference / JS template) ──
-         實際卡片由 JS renderTimelineCard() 產生
-         以下為 HTML 結構參考，不顯示在畫面上
-    -->
-    <template id="tplTimelineCard">
-      <div class="tl-card" data-id="" data-category="">
-        <div class="cat-bar"></div>
-        <div class="tl-card-body">
-          <div class="tl-card-time">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
-            </svg>
-            <span class="tl-time-text">—</span>
-          </div>
-          <div class="tl-card-main">
-            <div class="tl-card-top">
-              <span class="cat-tag"></span>
-              <span class="tl-card-title">—</span>
+        <!-- Skeleton -->
+        <div id="timelineSkeleton">
+          <div class="tl-card-skeleton"></div>
+          <div class="tl-card-skeleton"></div>
+          <div class="tl-card-skeleton"></div>
+        </div>
+
+        <!-- Empty state -->
+        <div class="timeline-empty hidden" id="timelineEmpty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+               width="48" height="48">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8"  y1="2" x2="8"  y2="6"/>
+            <line x1="3"  y1="10" x2="21" y2="10"/>
+          </svg>
+          <p>這天還沒有行程</p>
+          <button class="btn-primary btn-sm" id="btnAddEventEmpty">
+            新增第一個事件
+          </button>
+        </div>
+
+      </div><!-- /#timeline -->
+
+      <!-- Card Template -->
+      <template id="tplTimelineCard">
+        <div class="tl-card" data-id="" data-category="">
+          <div class="cat-bar"></div>
+          <div class="tl-card-body">
+            <div class="tl-card-time">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                   width="14" height="14">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              <span class="tl-time-text">—</span>
             </div>
-            <p class="tl-card-desc"></p>
-            <div class="tl-card-meta">
-              <!-- 地點 -->
-              <span class="tl-meta-item tl-location hidden">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="13" height="13">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                  <circle cx="12" cy="10" r="3"/>
+            <div class="tl-card-main">
+              <div class="tl-card-top">
+                <span class="cat-tag"></span>
+                <span class="tl-card-title">—</span>
+              </div>
+              <p class="tl-card-desc"></p>
+              <div class="tl-card-meta">
+                <span class="tl-meta-item tl-location hidden">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                       width="13" height="13">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                  </svg>
+                  <span></span>
+                </span>
+                <span class="tl-meta-item tl-cost hidden">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                       width="13" height="13">
+                    <line x1="12" y1="1" x2="12" y2="23"/>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                  </svg>
+                  <span></span>
+                </span>
+                <span class="tl-meta-item tl-note hidden">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                       width="13" height="13">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                  <span></span>
+                </span>
+              </div>
+            </div>
+            <button class="tl-card-arrow" aria-label="查看詳情">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                   width="18" height="18">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </template>
+
+    </section><!-- /panel-itinerary -->
+
+
+    <!-- ════════════════════════════════════════
+         PANEL 2 — 費用 EXPENSE
+         ════════════════════════════════════════ -->
+    <section class="tab-panel" id="panel-expense" role="tabpanel"
+             aria-labelledby="tab-expense">
+
+      <!-- Summary Card -->
+      <div class="expense-summary-card">
+        <div class="exp-sum-row">
+          <span class="exp-sum-label">旅行總支出</span>
+          <span class="exp-sum-total" id="expTotal">—</span>
+        </div>
+        <div class="exp-sum-row exp-sum-sub">
+          <span class="exp-sum-label">已結算</span>
+          <span class="exp-sum-settled" id="expSettled">—</span>
+          <span class="exp-sum-divider">·</span>
+          <span class="exp-sum-label">待結算</span>
+          <span class="exp-sum-pending" id="expPending">—</span>
+        </div>
+        <div class="exp-bar-wrap">
+          <div class="exp-bar-track">
+            <div class="exp-bar-fill" id="expBarFill" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="exp-persons" id="expPersons"></div>
+      </div>
+
+      <!-- Category Breakdown -->
+      <div class="section-header">
+        <span class="section-title">類別分析</span>
+      </div>
+      <div class="exp-categories" id="expCategories">
+        <div class="exp-cat-row skeleton-row"></div>
+        <div class="exp-cat-row skeleton-row"></div>
+        <div class="exp-cat-row skeleton-row"></div>
+      </div>
+
+      <!-- List Header -->
+      <div class="section-header" style="margin-top:1.25rem;">
+        <span class="section-title">明細</span>
+        <div class="section-actions">
+          <button class="btn-ghost btn-sm" id="btnFilterExp">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                 width="15" height="15">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </svg>
+            篩選
+          </button>
+          <button class="btn-primary btn-sm" id="btnAddExp">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                 width="15" height="15">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5"  y1="12" x2="19" y2="12"/>
+            </svg>
+            新增
+          </button>
+        </div>
+      </div>
+
+      <!-- Expense List -->
+      <div class="expense-list" id="expenseList">
+        <div id="expenseSkeleton">
+          <div class="tl-card-skeleton"></div>
+          <div class="tl-card-skeleton"></div>
+        </div>
+        <div class="timeline-empty hidden" id="expenseEmpty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+               width="48" height="48">
+            <line x1="12" y1="1" x2="12" y2="23"/>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+          <p>還沒有支出記錄</p>
+          <button class="btn-primary btn-sm" id="btnAddExpEmpty">
+            記錄第一筆支出
+          </button>
+        </div>
+      </div>
+
+      <template id="tplExpenseCard">
+        <div class="exp-card" data-id="">
+          <div class="cat-bar"></div>
+          <div class="exp-card-body">
+            <div class="exp-card-left">
+              <span class="cat-tag"></span>
+              <span class="exp-card-title">—</span>
+              <span class="exp-card-date">—</span>
+            </div>
+            <div class="exp-card-right">
+              <span class="exp-card-amount">—</span>
+              <span class="exp-card-payer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                     width="12" height="12">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
                 </svg>
                 <span></span>
               </span>
-              <!-- 費用 -->
-              <span class="tl-meta-item tl-cost hidden">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="13" height="13">
+            </div>
+          </div>
+        </div>
+      </template>
+
+    </section><!-- /panel-expense -->
+
+
+    <!-- ════════════════════════════════════════
+         PANEL 3 — 購物 SHOPPING
+         ════════════════════════════════════════ -->
+    <section class="tab-panel" id="panel-shopping" role="tabpanel"
+             aria-labelledby="tab-shopping">
+
+      <div class="shop-summary-card">
+        <div class="shop-sum-row">
+          <div class="shop-sum-stat">
+            <span class="shop-sum-num" id="shopTotal">0</span>
+            <span class="shop-sum-label">總項目</span>
+          </div>
+          <div class="shop-sum-divider-v"></div>
+          <div class="shop-sum-stat">
+            <span class="shop-sum-num shop-checked" id="shopChecked">0</span>
+            <span class="shop-sum-label">已購</span>
+          </div>
+          <div class="shop-sum-divider-v"></div>
+          <div class="shop-sum-stat">
+            <span class="shop-sum-num shop-unchecked" id="shopUnchecked">0</span>
+            <span class="shop-sum-label">未購</span>
+          </div>
+        </div>
+        <div class="exp-bar-wrap" style="margin-top:.75rem;">
+          <div class="exp-bar-track">
+            <div class="exp-bar-fill" id="shopBarFill"
+                 style="width:0%; background:var(--moss)"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <span class="section-title">清單</span>
+        <div class="section-actions">
+          <button class="btn-ghost btn-sm" id="btnShopFilter">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                 width="15" height="15">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </svg>
+            篩選
+          </button>
+          <button class="btn-primary btn-sm" id="btnAddShop">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                 width="15" height="15">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5"  y1="12" x2="19" y2="12"/>
+            </svg>
+            新增
+          </button>
+        </div>
+      </div>
+
+      <div class="shop-filter-strip" id="shopFilterStrip">
+        <button class="shop-filter-btn active" data-filter="all">全部</button>
+        <button class="shop-filter-btn" data-filter="unchecked">未購</button>
+        <button class="shop-filter-btn" data-filter="checked">已購</button>
+      </div>
+
+      <div class="shop-list" id="shopList">
+        <div id="shopSkeleton">
+          <div class="tl-card-skeleton"></div>
+          <div class="tl-card-skeleton"></div>
+        </div>
+        <div class="timeline-empty hidden" id="shopEmpty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+               width="48" height="48">
+            <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <path d="M16 10a4 4 0 0 1-8 0"/>
+          </svg>
+          <p>購物清單是空的</p>
+          <button class="btn-primary btn-sm" id="btnAddShopEmpty">
+            加入第一個項目
+          </button>
+        </div>
+      </div>
+
+      <template id="tplShopItem">
+        <div class="shop-item" data-id="" data-checked="false">
+          <button class="shop-check-btn" aria-label="標記為已購"
+                  aria-pressed="false">
+            <svg class="icon-unchecked" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.5"
+                 stroke-linecap="round" stroke-linejoin="round"
+                 width="22" height="22">
+              <circle cx="12" cy="12" r="10"/>
+            </svg>
+            <svg class="icon-checked hidden" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.5"
+                 stroke-linecap="round" stroke-linejoin="round"
+                 width="22" height="22">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+          </button>
+          <div class="shop-item-body">
+            <span class="shop-item-name">—</span>
+            <div class="shop-item-meta">
+              <span class="cat-tag"></span>
+              <span class="shop-item-price hidden">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                     width="12" height="12">
                   <line x1="12" y1="1" x2="12" y2="23"/>
                   <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                 </svg>
                 <span></span>
               </span>
-              <!-- 備註 -->
-              <span class="tl-meta-item tl-note hidden">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="13" height="13">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
+              <span class="shop-item-store hidden">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                     width="12" height="12">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                  <polyline points="9 22 9 12 15 12 15 22"/>
                 </svg>
                 <span></span>
               </span>
             </div>
           </div>
-          <button class="tl-card-arrow" aria-label="查看詳情">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-              <polyline points="9 18 15 12 9 6"/>
+          <button class="shop-item-more" aria-label="更多選項">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                 width="18" height="18">
+              <circle cx="12" cy="5"  r="1"/>
+              <circle cx="12" cy="12" r="1"/>
+              <circle cx="12" cy="19" r="1"/>
             </svg>
           </button>
         </div>
-      </div>
-    </template>
+      </template>
 
-  </section><!-- /panel-itinerary -->
-    <!-- ════════════════════════════════════════════════════
-       TAB PANEL 2 — 支出 EXPENSE
-       ════════════════════════════════════════════════════ -->
-  <section class="tab-panel" id="panel-expense" role="tabpanel">
+    </section><!-- /panel-shopping -->
 
-    <!-- Summary Card -->
-    <div class="expense-summary-card">
-      <div class="exp-sum-row">
-        <span class="exp-sum-label">旅行總支出</span>
-        <span class="exp-sum-total" id="expTotal">—</span>
-      </div>
-      <div class="exp-sum-row exp-sum-sub">
-        <span class="exp-sum-label">已結算</span>
-        <span class="exp-sum-settled" id="expSettled">—</span>
-        <span class="exp-sum-divider">·</span>
-        <span class="exp-sum-label">待結算</span>
-        <span class="exp-sum-pending" id="expPending">—</span>
-      </div>
-      <div class="exp-bar-wrap">
-        <div class="exp-bar-track">
-          <div class="exp-bar-fill" id="expBarFill" style="width: 0%"></div>
-        </div>
-      </div>
-      <!-- Per-person breakdown -->
-      <div class="exp-persons" id="expPersons">
-        <!-- JS 動態產生 per-person chips -->
-      </div>
-    </div>
 
-    <!-- Category Breakdown -->
-    <div class="section-header">
-      <span class="section-title">類別分析</span>
-    </div>
-    <div class="exp-categories" id="expCategories">
-      <!-- JS 動態產生 category bars -->
-      <div class="exp-cat-row skeleton-row"></div>
-      <div class="exp-cat-row skeleton-row"></div>
-      <div class="exp-cat-row skeleton-row"></div>
-    </div>
+    <!-- ════════════════════════════════════════
+         PANEL 4 — 資訊 INFO
+         ════════════════════════════════════════ -->
+    <section class="tab-panel" id="panel-info" role="tabpanel"
+             aria-labelledby="tab-info">
 
-    <!-- Expense List Header -->
-    <div class="section-header" style="margin-top: 1.5rem;">
-      <span class="section-title">明細</span>
-      <div class="section-actions">
-        <button class="btn-ghost btn-sm" id="btnFilterExp">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
-            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+      <!-- Emergency Contacts -->
+      <div class="section-header">
+        <div class="section-title-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+               width="18" height="18">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0
+                     1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79
+                     0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2
+                     1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45
+                     2.11L7.91 8.96a16 16 0 0 0 6.13 6.13l.95-.95a2 2
+                     0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0 0
+                     1 1.72 2.03z"/>
           </svg>
-          篩選
-        </button>
-        <button class="btn-primary btn-sm" id="btnAddExp">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+          <span class="section-title">緊急聯絡</span>
+        </div>
+        <button class="btn-ghost btn-sm" id="btnAddContact">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+               width="15" height="15">
             <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
+            <line x1="5"  y1="12" x2="19" y2="12"/>
           </svg>
           新增
         </button>
       </div>
-    </div>
 
-    <!-- Expense List -->
-    <div class="expense-list" id="expenseList">
-      <div class="tl-skeleton">
-        <div class="tl-card-skeleton"></div>
-        <div class="tl-card-skeleton"></div>
-      </div>
-      <div class="timeline-empty hidden" id="expenseEmpty">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="48" height="48">
-          <line x1="12" y1="1" x2="12" y2="23"/>
-          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-        </svg>
-        <p>還沒有支出記錄</p>
-        <button class="btn-primary btn-sm" id="btnAddExpEmpty">記錄第一筆支出</button>
-      </div>
-    </div>
-
-    <template id="tplExpenseCard">
-      <div class="exp-card" data-id="">
-        <div class="cat-bar"></div>
-        <div class="exp-card-body">
-          <div class="exp-card-left">
-            <span class="cat-tag"></span>
-            <span class="exp-card-title">—</span>
-            <span class="exp-card-date">—</span>
+      <div class="info-list" id="contactList">
+        <!-- Preset: Taiwan overseas emergency -->
+        <div class="info-card info-contact">
+          <div class="info-card-icon" style="background:#fee2e2;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#8b1a1a"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                 width="20" height="20">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0
+                       1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79
+                       0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2
+                       1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45
+                       2.11L7.91 8.96a16 16 0 0 0 6.13 6.13l.95-.95a2
+                       2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0
+                       0 1 1.72 2.03z"/>
+            </svg>
           </div>
-          <div class="exp-card-right">
-            <span class="exp-card-amount">—</span>
-            <span class="exp-card-payer">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="12" height="12">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
-              <span></span>
-            </span>
+          <div class="info-card-body">
+            <span class="info-card-title">台灣旅外急難救助</span>
+            <span class="info-card-sub">+886-800-085-095</span>
           </div>
+          <a href="tel:+886800085095" class="info-card-action" aria-label="撥打電話">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                 width="18" height="18">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0
+                       1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79
+                       0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2
+                       1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45
+                       2.11L7.91 8.96a16 16 0 0 0 6.13 6.13l.95-.95a2
+                       2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0
+                       0 1 1.72 2.03z"/>
+            </svg>
+          </a>
         </div>
       </div>
-    </template>
 
-  </section><!-- /panel-expense -->
-  <!-- ════════════════════════════════════════════════════
-       TAB PANEL 3 — 購物 SHOPPING
-       ════════════════════════════════════════════════════ -->
-  <section class="tab-panel" id="panel-shopping" role="tabpanel">
-
-    <!-- Shopping Summary -->
-    <div class="shop-summary-card">
-      <div class="shop-sum-row">
-        <div class="shop-sum-stat">
-          <span class="shop-sum-num" id="shopTotal">0</span>
-          <span class="shop-sum-label">總項目</span>
-        </div>
-        <div class="shop-sum-divider-v"></div>
-        <div class="shop-sum-stat">
-          <span class="shop-sum-num shop-checked" id="shopChecked">0</span>
-          <span class="shop-sum-label">已購</span>
-        </div>
-        <div class="shop-sum-divider-v"></div>
-        <div class="shop-sum-stat">
-          <span class="shop-sum-num shop-unchecked" id="shopUnchecked">0</span>
-          <span class="shop-sum-label">未購</span>
-        </div>
-      </div>
-      <div class="exp-bar-wrap" style="margin-top: 0.75rem;">
-        <div class="exp-bar-track">
-          <div class="exp-bar-fill shop-bar-fill" id="shopBarFill" style="width: 0%; background: var(--moss)"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- List Controls -->
-    <div class="section-header">
-      <span class="section-title">清單</span>
-      <div class="section-actions">
-        <button class="btn-ghost btn-sm" id="btnShopFilter">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
-            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+      <!-- Documents -->
+      <div class="section-header" style="margin-top:1.5rem;">
+        <div class="section-title-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+               width="18" height="18">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
           </svg>
-          篩選
-        </button>
-        <button class="btn-primary btn-sm" id="btnAddShop">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+          <span class="section-title">重要文件</span>
+        </div>
+        <button class="btn-ghost btn-sm" id="btnAddDoc">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+               width="15" height="15">
             <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
+            <line x1="5"  y1="12" x2="19" y2="12"/>
           </svg>
           新增
         </button>
       </div>
-    </div>
-
-    <!-- Filter Tabs (All / Unchecked / Checked) -->
-    <div class="shop-filter-strip">
-      <button class="shop-filter-btn active" data-filter="all">全部</button>
-      <button class="shop-filter-btn" data-filter="unchecked">未購</button>
-      <button class="shop-filter-btn" data-filter="checked">已購</button>
-    </div>
-
-    <!-- Shopping List -->
-    <div class="shop-list" id="shopList">
-      <div class="tl-skeleton">
-        <div class="tl-card-skeleton"></div>
-        <div class="tl-card-skeleton"></div>
-      </div>
-      <div class="timeline-empty hidden" id="shopEmpty">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="48" height="48">
-          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-          <line x1="3" y1="6" x2="21" y2="6"/>
-          <path d="M16 10a4 4 0 0 1-8 0"/>
-        </svg>
-        <p>購物清單是空的</p>
-        <button class="btn-primary btn-sm" id="btnAddShopEmpty">加入第一個項目</button>
-      </div>
-    </div>
-
-    <template id="tplShopItem">
-      <div class="shop-item" data-id="" data-checked="false">
-        <button class="shop-check-btn" aria-label="標記為已購">
-          <!-- unchecked state -->
-          <svg class="icon-unchecked" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22">
-            <circle cx="12" cy="12" r="10"/>
-          </svg>
-          <!-- checked state -->
-          <svg class="icon-checked hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-            <polyline points="22 4 12 14.01 9 11.01"/>
-          </svg>
-        </button>
-        <div class="shop-item-body">
-          <span class="shop-item-name">—</span>
-          <div class="shop-item-meta">
-            <span class="cat-tag"></span>
-            <span class="shop-item-price hidden">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="12" height="12">
-                <line x1="12" y1="1" x2="12" y2="23"/>
-                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-              </svg>
-              <span></span>
-            </span>
-            <span class="shop-item-store hidden">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="12" height="12">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                <polyline points="9 22 9 12 15 12 15 22"/>
-              </svg>
-              <span></span>
-            </span>
-          </div>
-        </div>
-        <button class="shop-item-more" aria-label="更多選項">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-            <circle cx="12" cy="5" r="1"/>
-            <circle cx="12" cy="12" r="1"/>
-            <circle cx="12" cy="19" r="1"/>
-          </svg>
-        </button>
-      </div>
-    </template>
-
-  </section><!-- /panel-shopping -->
-  <!-- ════════════════════════════════════════════════════
-       TAB PANEL 4 — 資訊 INFO
-       ════════════════════════════════════════════════════ -->
-  <section class="tab-panel" id="panel-info" role="tabpanel">
-
-    <!-- Emergency Contacts -->
-    <div class="section-header">
-      <div class="section-title-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.13 6.13l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0 0 1 1.72 2.03z"/>
-        </svg>
-        <span class="section-title">緊急聯絡</span>
-      </div>
-      <button class="btn-ghost btn-sm" id="btnAddContact">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        新增
-      </button>
-    </div>
-    <div class="info-list" id="contactList">
-      <!-- JS 動態產生 -->
-      <!-- Preset: 台灣旅外急難救助 -->
-      <div class="info-card info-contact">
-        <div class="info-card-icon" style="background: #fee2e2;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#8b1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
-            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.13 6.13l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0 0 1 1.72 2.03z"/>
-          </svg>
-        </div>
-        <div class="info-card-body">
-          <span class="info-card-title">台灣旅外急難救助</span>
-          <span class="info-card-sub">+886-800-085-095</span>
-        </div>
-        <a href="tel:+886800085095" class="info-card-action" aria-label="撥打電話">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.13 6.13l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0 0 1 1.72 2.03z"/>
-          </svg>
-        </a>
-      </div>
-    </div>
-
-    <!-- Documents & Bookings -->
-    <div class="section-header" style="margin-top: 1.5rem;">
-      <div class="section-title-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-          <polyline points="10 9 9 9 8 9"/>
-        </svg>
-        <span class="section-title">重要文件</span>
-      </div>
-      <button class="btn-ghost btn-sm" id="btnAddDoc">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        新增
-      </button>
-    </div>
-    <div class="info-list" id="docList">
-      <div class="timeline-empty" id="docEmpty">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="40" height="40">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-        </svg>
-        <p>尚未上傳文件</p>
-      </div>
-    </div>
-
-    <template id="tplDocCard">
-      <div class="info-card info-doc" data-id="">
-        <div class="info-card-icon" style="background: #e8f0ea;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#2d4a2e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+      <div class="info-list" id="docList">
+        <div class="timeline-empty" id="docEmpty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+               width="40" height="40">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
           </svg>
+          <p>尚未上傳文件</p>
         </div>
-        <div class="info-card-body">
-          <span class="info-card-title">—</span>
-          <span class="info-card-sub">—</span>
-        </div>
-        <a href="#" class="info-card-action" target="_blank" aria-label="開啟文件">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-            <polyline points="15 3 21 3 21 9"/>
-            <line x1="10" y1="14" x2="21" y2="3"/>
-          </svg>
-        </a>
       </div>
-    </template>
 
-    <!-- Notes -->
-    <div class="section-header" style="margin-top: 1.5rem;">
-      <div class="section-title-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-        </svg>
-        <span class="section-title">旅行備忘</span>
-      </div>
-    </div>
-    <div class="info-notes-card" id="tripNotes">
-      <textarea class="notes-textarea" id="notesTextarea" placeholder="在這裡記錄注意事項、行前準備……" rows="5"></textarea>
-      <div class="notes-footer">
-        <span class="notes-saved-hint" id="notesSavedHint"></span>
-        <button class="btn-ghost btn-sm" id="btnSaveNotes">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
-            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-            <polyline points="17 21 17 13 7 13 7 21"/>
-            <polyline points="7 3 7 8 15 8"/>
-          </svg>
-          儲存
-        </button>
-      </div>
-    </div>
-
-  </section><!-- /panel-info -->
-  <!-- ════════════════════════════════════════════════════
-       TAB PANEL 5 — 工具 TOOLS
-       ════════════════════════════════════════════════════ -->
-  <section class="tab-panel" id="panel-tools" role="tabpanel">
-
-    <!-- Currency Converter -->
-    <div class="section-header">
-      <div class="section-title-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-          <polyline points="17 1 21 5 17 9"/>
-          <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-          <polyline points="7 23 3 19 7 15"/>
-          <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-        </svg>
-        <span class="section-title">匯率換算</span>
-      </div>
-      <span class="rate-updated-hint" id="rateUpdatedHint">—</span>
-    </div>
-
-    <div class="currency-card">
-      <div class="currency-row">
-        <div class="currency-field">
-          <label class="currency-label">從</label>
-          <div class="currency-input-wrap">
-            <select class="currency-select" id="currencyFrom">
-              <!-- JS 動態產生選項 -->
-            </select>
-            <input type="number" class="currency-input" id="currencyAmountFrom" placeholder="0" inputmode="decimal">
+      <template id="tplDocCard">
+        <div class="info-card info-doc" data-id="">
+          <div class="info-card-icon" style="background:#e8f0ea;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#2d4a2e"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                 width="20" height="20">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
           </div>
+          <div class="info-card-body">
+            <span class="info-card-title">—</span>
+            <span class="info-card-sub">—</span>
+          </div>
+          <a href="#" class="info-card-action" target="_blank" aria-label="開啟文件">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                 width="18" height="18">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+              <polyline points="15 3 21 3 21 9"/>
+              <line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+          </a>
         </div>
-        <button class="currency-swap-btn" id="btnSwapCurrency" aria-label="交換貨幣">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+      </template>
+
+      <!-- Notes -->
+      <div class="section-header" style="margin-top:1.5rem;">
+        <div class="section-title-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+               width="18" height="18">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          <span class="section-title">旅行備忘</span>
+        </div>
+      </div>
+      <div class="info-notes-card">
+        <textarea class="notes-textarea" id="notesTextarea"
+                  placeholder="在這裡記錄注意事項、行前準備……"
+                  rows="5"></textarea>
+        <div class="notes-footer">
+          <span class="notes-saved-hint" id="notesSavedHint"></span>
+          <button class="btn-ghost btn-sm" id="btnSaveNotes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                 width="15" height="15">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            儲存
+          </button>
+        </div>
+      </div>
+
+    </section><!-- /panel-info -->
+
+
+    <!-- ════════════════════════════════════════
+         PANEL 5 — 工具 TOOLS
+         ════════════════════════════════════════ -->
+    <section class="tab-panel" id="panel-tools" role="tabpanel"
+             aria-labelledby="tab-tools">
+
+      <!-- Currency Converter -->
+      <div class="section-header">
+        <div class="section-title-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+               width="18" height="18">
             <polyline points="17 1 21 5 17 9"/>
             <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
             <polyline points="7 23 3 19 7 15"/>
             <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
           </svg>
-        </button>
-        <div class="currency-field">
-          <label class="currency-label">至</label>
-          <div class="currency-input-wrap">
-            <select class="currency-select" id="currencyTo">
-              <!-- JS 動態產生選項 -->
-            </select>
-            <input type="number" class="currency-input" id="currencyAmountTo" placeholder="0" inputmode="decimal" readonly>
+          <span class="section-title">匯率換算</span>
+        </div>
+        <span class="rate-updated-hint" id="rateUpdatedHint">—</span>
+      </div>
+
+      <div class="currency-card">
+        <div class="currency-row">
+          <div class="currency-field">
+            <label class="currency-label" for="currencyFrom">從</label>
+            <div class="currency-input-wrap">
+              <select class="currency-select" id="currencyFrom"></select>
+              <input type="number" class="currency-input"
+                     id="currencyAmountFrom" placeholder="0" inputmode="decimal">
+            </div>
+          </div>
+
+          <button class="currency-swap-btn" id="btnSwapCurrency"
+                  aria-label="交換貨幣">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                 width="20" height="20">
+              <polyline points="17 1 21 5 17 9"/>
+              <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+              <polyline points="7 23 3 19 7 15"/>
+              <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+            </svg>
+          </button>
+
+          <div class="currency-field">
+            <label class="currency-label" for="currencyTo">至</label>
+            <div class="currency-input-wrap">
+              <select class="currency-select" id="currencyTo"></select>
+              <input type="number" class="currency-input"
+                     id="currencyAmountTo" placeholder="0"
+                     inputmode="decimal" readonly>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="currency-rate-row" id="currencyRateDisplay">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="8" x2="12" y2="12"/>
-          <line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-        <span id="rateText">載入匯率中…</span>
-      </div>
-    </div>
 
-    <!-- Point & Speak -->
-    <div class="section-header" style="margin-top: 1.5rem;">
-      <div class="section-title-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-        <span class="section-title">指認說話卡</span>
-      </div>
-      <button class="btn-ghost btn-sm" id="btnAddPAS">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        新增
-      </button>
-    </div>
-
-    <!-- PAS Category Filter -->
-    <div class="shop-filter-strip" id="pasFilterStrip">
-      <button class="shop-filter-btn active" data-filter="all">全部</button>
-      <button class="shop-filter-btn" data-filter="restaurant">餐廳</button>
-      <button class="shop-filter-btn" data-filter="transport">交通</button>
-      <button class="shop-filter-btn" data-filter="hotel">住宿</button>
-      <button class="shop-filter-btn" data-filter="medical">醫療</button>
-      <button class="shop-filter-btn" data-filter="other">其他</button>
-    </div>
-
-    <!-- PAS Cards Grid -->
-    <div class="pas-grid" id="pasGrid">
-      <!-- JS 動態產生 / 預設卡片 -->
-
-      <!-- Preset PAS cards (built-in) -->
-      <div class="pas-card" data-category="restaurant">
-        <div class="pas-card-local">這個請給我兩份</div>
-        <div class="pas-card-target">これを二つください</div>
-        <div class="pas-card-phonetic">Kore o futatsu kudasai</div>
-        <button class="pas-speak-btn" aria-label="語音播放">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        <div class="currency-rate-row">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+               width="14" height="14">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8"  x2="12"   y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
+          <span id="rateText">載入匯率中…</span>
+        </div>
+      </div>
+
+      <!-- Point & Speak -->
+      <div class="section-header" style="margin-top:1.5rem;">
+        <div class="section-title-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+               width="18" height="18">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span class="section-title">指認說話卡</span>
+        </div>
+        <button class="btn-ghost btn-sm" id="btnAddPAS">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+               width="15" height="15">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5"  y1="12" x2="19" y2="12"/>
+          </svg>
+          新增
         </button>
       </div>
 
-      <div class="pas-card" data-category="transport">
-        <div class="pas-card-local">請帶我去這個地址</div>
-        <div class="pas-card-target">この住所に連れて行ってください</div>
-        <div class="pas-card-phonetic">Kono jūsho ni tsurete itte kudasai</div>
-        <button class="pas-speak-btn" aria-label="語音播放">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-          </svg>
-        </button>
+      <!-- PAS Category Filter -->
+      <div class="shop-filter-strip" id="pasFilterStrip">
+        <button class="shop-filter-btn active" data-filter="all">全部</button>
+        <button class="shop-filter-btn" data-filter="restaurant">餐廳</button>
+        <button class="shop-filter-btn" data-filter="transport">交通</button>
+        <button class="shop-filter-btn" data-filter="hotel">住宿</button>
+        <button class="shop-filter-btn" data-filter="medical">醫療</button>
+        <button class="shop-filter-btn" data-filter="other">其他</button>
       </div>
 
-      <div class="pas-card" data-category="medical">
-        <div class="pas-card-local">我需要看醫生</div>
-        <div class="pas-card-target">医者が必要です</div>
-        <div class="pas-card-phonetic">Isha ga hitsuyō desu</div>
-        <button class="pas-speak-btn" aria-label="語音播放">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-          </svg>
-        </button>
-      </div>
+      <!-- PAS Grid -->
+      <div class="pas-grid" id="pasGrid">
 
-      <div class="timeline-empty hidden" id="pasEmpty">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="40" height="40">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-        <p>尚無說話卡</p>
-      </div>
-    </div>
-
-    <template id="tplPASCard">
-      <div class="pas-card" data-id="" data-category="">
-        <div class="pas-card-local">—</div>
-        <div class="pas-card-target">—</div>
-        <div class="pas-card-phonetic">—</div>
-        <div class="pas-card-actions">
+        <!-- Preset cards -->
+        <div class="pas-card" data-category="restaurant">
+          <div class="pas-card-local">這個請給我兩份</div>
+          <div class="pas-card-target">これを二つください</div>
+          <div class="pas-card-phonetic">Kore o futatsu kudasai</div>
           <button class="pas-speak-btn" aria-label="語音播放">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                 width="18" height="18">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
               <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
               <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
             </svg>
           </button>
-          <button class="pas-edit-btn" aria-label="編輯">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </div>
+
+        <div class="pas-card" data-category="transport">
+          <div class="pas-card-local">請帶我去這個地址</div>
+          <div class="pas-card-target">この住所に連れて行ってください</div>
+          <div class="pas-card-phonetic">Kono jūsho ni tsurete itte kudasai</div>
+          <button class="pas-speak-btn" aria-label="語音播放">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                 width="18" height="18">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
             </svg>
           </button>
         </div>
-      </div>
-    </template>
 
-    <!-- GPS Float Bar placeholder (activated via JS) -->
-    <div class="gps-float-bar hidden" id="gpsFloatBar">
-      <div class="gps-bar-inner">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
-          <circle cx="12" cy="12" r="10"/>
-          <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
-        </svg>
-        <span id="gpsCoords">取得位置中…</span>
-        <button class="btn-ghost btn-sm" id="btnCopyCoords">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        <div class="pas-card" data-category="medical">
+          <div class="pas-card-local">我需要看醫生</div>
+          <div class="pas-card-target">医者が必要です</div>
+          <div class="pas-card-phonetic">Isha ga hitsuyō desu</div>
+          <button class="pas-speak-btn" aria-label="語音播放">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                 width="18" height="18">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Empty state (shown by JS when no cards match filter) -->
+        <div class="timeline-empty hidden" id="pasEmpty"
+             style="grid-column:1/-1;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+               width="40" height="40">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
           </svg>
-        </button>
-      </div>
-    </div>
-
-  </section><!-- /panel-tools -->
-
-</main><!-- /trip-main -->
-
-  <!-- Tab Navigation -->
-  <nav id="tab-bar">
-
-    <button class="tab-btn active" data-tab="itinerary">
-      <i data-lucide="map" style="width:22px;height:22px;"></i>
-      <span class="tab-label">行程</span>
-    </button>
-
-    <button class="tab-btn" data-tab="expense">
-      <i data-lucide="wallet" style="width:22px;height:22px;"></i>
-      <span class="tab-label">費用</span>
-    </button>
-
-    <button class="tab-btn" data-tab="shopping">
-      <i data-lucide="shopping-bag" style="width:22px;height:22px;"></i>
-      <span class="tab-label">購物</span>
-    </button>
-
-    <button class="tab-btn" data-tab="info">
-      <i data-lucide="info" style="width:22px;height:22px;"></i>
-      <span class="tab-label">資訊</span>
-    </button>
-
-    <button class="tab-btn" data-tab="tools">
-      <i data-lucide="wrench" style="width:22px;height:22px;"></i>
-      <span class="tab-label">工具</span>
-    </button>
-
-  </nav>
-
-  <!-- Tab Content -->
-  <main id="tab-content">
-
-    <!-- 行程 Tab -->
-    <section class="tab-panel active" id="panel-itinerary">
-      <div class="empty-state">
-        <div class="empty-icon">
-          <i data-lucide="map" style="width:30px;height:30px;"></i>
+          <p>尚無說話卡</p>
         </div>
-        <p class="empty-title">尚無行程安排</p>
-        <p class="empty-desc">點擊下方「＋」按鈕，新增第一天的行程吧！</p>
-      </div>
-    </section>
+      </div><!-- /#pasGrid -->
 
-    <!-- 費用 Tab -->
-    <section class="tab-panel" id="panel-expense">
-      <div class="empty-state">
-        <div class="empty-icon">
-          <i data-lucide="wallet" style="width:30px;height:30px;"></i>
+      <template id="tplPASCard">
+        <div class="pas-card" data-id="" data-category="">
+          <div class="pas-card-local">—</div>
+          <div class="pas-card-target">—</div>
+          <div class="pas-card-phonetic">—</div>
+          <div class="pas-card-actions">
+            <button class="pas-speak-btn" aria-label="語音播放">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                   width="18" height="18">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              </svg>
+            </button>
+            <button class="pas-edit-btn" aria-label="編輯">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                   width="16" height="16">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+          </div>
         </div>
-        <p class="empty-title">尚無費用記錄</p>
-        <p class="empty-desc">開始記錄旅途中的每一筆花費。</p>
-      </div>
-    </section>
+      </template>
 
-    <!-- 購物 Tab -->
-    <section class="tab-panel" id="panel-shopping">
-      <div class="empty-state">
-        <div class="empty-icon">
-          <i data-lucide="shopping-bag" style="width:30px;height:30px;"></i>
-        </div>
-        <p class="empty-title">購物清單是空的</p>
-        <p class="empty-desc">把想買的東西加進來，出發前一次確認！</p>
-      </div>
-    </section>
+    </section><!-- /panel-tools -->
 
-    <!-- 資訊 Tab -->
-    <section class="tab-panel" id="panel-info">
-      <div class="empty-state">
-        <div class="empty-icon">
-          <i data-lucide="info" style="width:30px;height:30px;"></i>
-        </div>
-        <p class="empty-title">尚無旅遊資訊</p>
-        <p class="empty-desc">可加入簽證、緊急聯絡、住宿等重要資訊。</p>
-      </div>
-    </section>
+  </main><!-- /#tab-content -->
 
-    <!-- 工具 Tab -->
-    <section class="tab-panel" id="panel-tools">
-      <div class="empty-state">
-        <div class="empty-icon">
-          <i data-lucide="wrench" style="width:30px;height:30px;"></i>
-        </div>
-        <p class="empty-title">工具箱</p>
-        <p class="empty-desc">匯率換算、時差查詢等實用工具即將上線。</p>
-      </div>
-    </section>
-
-  </main>
 </div><!-- /#app -->
 
+<!-- GPS Float Bar — fixed overlay, outside #app scroll context -->
+<div class="gps-float-bar hidden" id="gpsFloatBar">
+  <div class="gps-bar-inner">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+         width="20" height="20">
+      <circle cx="12" cy="12" r="10"/>
+      <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+    </svg>
+    <span id="gpsCoords">取得位置中…</span>
+    <button class="btn-ghost btn-sm" id="btnCopyCoords">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+           width="15" height="15">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+      </svg>
+    </button>
+  </div>
+</div>
 
+
+<!-- ── Inline Bootstrap Script ───────────────────────────────── -->
 <script>
-  // ── 初始化 Lucide Icons ───────────────────────────────────────
-  // 頁面解析完成後立即渲染所有 data-lucide 圖示
+  /* 1. Render all static Lucide icons */
   lucide.createIcons();
 
-  // ── Tab 切換 ─────────────────────────────────────────────────
-  const tabBar     = document.getElementById('tab-bar');
-  const tabBtns    = tabBar.querySelectorAll('.tab-btn');
-  const tabPanels  = document.querySelectorAll('.tab-panel');
+  /* 2. Tab switching */
+  const tabBar    = document.getElementById('tab-bar');
+  const allBtns   = tabBar.querySelectorAll('.tab-btn');
+  const allPanels = document.querySelectorAll('#tab-content .tab-panel');
 
-  tabBtns.forEach(btn => {
+  allBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       const target = btn.dataset.tab;
 
-      tabBtns.forEach(b => b.classList.remove('active'));
-      tabPanels.forEach(p => p.classList.remove('active'));
+      allBtns.forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+      });
+      allPanels.forEach(p => p.classList.remove('active'));
 
       btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
       document.getElementById(`panel-${target}`).classList.add('active');
     });
   });
 
-  // ── 公用函式：重新渲染動態插入的 Lucide 圖示 ──────────────────
-  // 在 trip.js 動態插入 HTML 後呼叫此函式
+  /* 3. Shopping filter strip */
+  document.getElementById('shopFilterStrip')
+    .addEventListener('click', e => {
+      const btn = e.target.closest('.shop-filter-btn');
+      if (!btn) return;
+      document.querySelectorAll('#shopFilterStrip .shop-filter-btn')
+        .forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      // trip.js will pick up btn.dataset.filter via event delegation
+    });
+
+  /* 4. PAS filter strip */
+  document.getElementById('pasFilterStrip')
+    .addEventListener('click', e => {
+      const btn = e.target.closest('.shop-filter-btn');
+      if (!btn) return;
+      document.querySelectorAll('#pasFilterStrip .shop-filter-btn')
+        .forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+
+  /* 5. Public helpers for trip.js */
   window.refreshIcons = () => lucide.createIcons();
 
-  // ── Cover Image 淡入 ─────────────────────────────────────────
   window.setHeaderCover = (url) => {
     if (!url) return;
     const cover = document.getElementById('header-cover');
@@ -1208,30 +1800,24 @@
     img.src = url;
   };
 
-  // ── 狀態徽章設定 ─────────────────────────────────────────────
   const STATUS_MAP = {
-    planning:  { cls: 'status-planning',  icon: 'clock',         label: '規劃中' },
-    active:    { cls: 'status-active',    icon: 'plane',         label: '進行中' },
-    completed: { cls: 'status-completed', icon: 'check-circle',  label: '已結束' },
-    cancelled: { cls: 'status-cancelled', icon: 'x-circle',      label: '已取消' },
+    planning:  { cls: 'status-planning',  icon: 'clock',        label: '規劃中' },
+    active:    { cls: 'status-active',    icon: 'plane',        label: '進行中' },
+    completed: { cls: 'status-completed', icon: 'check-circle', label: '已結束' },
+    cancelled: { cls: 'status-cancelled', icon: 'x-circle',     label: '已取消' },
   };
 
   window.setStatusBadge = (status) => {
     const badge = document.getElementById('status-badge');
     const cfg   = STATUS_MAP[status] || STATUS_MAP.planning;
-
-    // 清除舊 class
     Object.values(STATUS_MAP).forEach(c => badge.classList.remove(c.cls));
     badge.classList.add(cfg.cls);
-
     badge.innerHTML = `
       <i data-lucide="${cfg.icon}" style="width:11px;height:11px;"></i>
-      <span>${cfg.label}</span>
-    `;
+      <span>${cfg.label}</span>`;
     lucide.createIcons({ nodes: [badge] });
   };
 
-  // ── App 顯示 / 隱藏 控制 ────────────────────────────────────
   window.showApp = () => {
     document.getElementById('loading-overlay').classList.add('hidden');
     document.getElementById('app').classList.add('visible');
@@ -1239,13 +1825,14 @@
 
   window.showError = (msg) => {
     document.getElementById('loading-overlay').classList.add('hidden');
-    const screen = document.getElementById('error-screen');
+    const s = document.getElementById('error-screen');
     if (msg) document.getElementById('error-msg-text').textContent = msg;
-    screen.classList.add('visible');
+    s.classList.add('visible');
+    lucide.createIcons({ nodes: [s] });
   };
 </script>
 
-<!-- trip.js 在最後載入，負責資料初始化 -->
+<!-- trip.js loaded last — handles auth, data fetch, render -->
 <script type="module" src="js/trip.js"></script>
 
 </body>
