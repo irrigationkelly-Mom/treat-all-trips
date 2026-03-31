@@ -3,207 +3,568 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>行程儀表板</title>
+  <title>行程載入中...</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2c7a7b" />
 
-  <!-- PWA 相關（manifest.json 待補）-->
-  <!-- <link rel="manifest" href="manifest.json" /> -->
-
-  <!-- Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <!-- 樣式 -->
-  <link rel="stylesheet" href="css/style.css" />
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
   <style>
-    /* ===== 頂部行程資訊列 ===== */
-    .trip-header {
+    /* ── Reset & Base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --teal-700: #2c7a7b;
+      --teal-600: #38a169;
+      --teal-500: #4fd1c5;
+      --teal-100: #e6fffa;
+      --amber-400: #f6ad55;
+      --amber-500: #ed8936;
+      --gray-50:  #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-400: #9ca3af;
+      --gray-500: #6b7280;
+      --gray-700: #374151;
+      --gray-900: #111827;
+      --white:    #ffffff;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.08);
+      --shadow-md: 0 4px 12px rgba(0,0,0,.12);
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --tab-bar-h: 64px;
+      --header-h:  260px;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                   "PingFang TC", "Noto Sans TC", sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-900);
+      overflow-x: hidden;
+    }
+
+    /* ── Loading Overlay ──────────────────────────────────────── */
+    #loading-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: var(--white);
+      gap: 16px;
+      transition: opacity .3s ease;
+    }
+    #loading-overlay.hidden { opacity: 0; pointer-events: none; }
+
+    .loading-spinner {
+      width: 44px; height: 44px;
+      border: 3px solid var(--gray-200);
+      border-top-color: var(--teal-700);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      font-size: 14px; color: var(--gray-500);
+      letter-spacing: .02em;
+    }
+
+    /* ── Error Screen ─────────────────────────────────────────── */
+    #error-screen {
+      display: none;
+      position: fixed; inset: 0; z-index: 9998;
+      flex-direction: column;
+      align-items: center; justify-content: center;
+      background: var(--gray-50);
+      gap: 12px; padding: 32px;
+      text-align: center;
+    }
+    #error-screen.visible { display: flex; }
+
+    .error-icon {
+      width: 56px; height: 56px;
+      background: #fff5f5;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: #e53e3e;
+    }
+    .error-title  { font-size: 18px; font-weight: 700; color: var(--gray-900); }
+    .error-msg    { font-size: 14px; color: var(--gray-500); max-width: 280px; line-height: 1.6; }
+
+    .btn-back {
+      margin-top: 8px;
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 20px;
+      background: var(--teal-700); color: var(--white);
+      border: none; border-radius: var(--radius-sm);
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      text-decoration: none;
+      transition: background .2s;
+    }
+    .btn-back:hover { background: #285e61; }
+
+    /* ── App Shell ────────────────────────────────────────────── */
+    #app {
+      display: none;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    #app.visible { display: flex; }
+
+    /* ── Hero Header ──────────────────────────────────────────── */
+    #trip-header {
       position: relative;
-      width: 100%;
-      height: 180px;
-      background-color: #ccc;
+      height: var(--header-h);
+      background: linear-gradient(135deg, var(--teal-700) 0%, #285e61 100%);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    #header-cover {
+      position: absolute; inset: 0;
       background-size: cover;
       background-position: center;
-      display: flex;
-      align-items: flex-end;
+      opacity: 0;
+      transition: opacity .6s ease;
+    }
+    #header-cover.loaded { opacity: 1; }
+
+    /* 漸層遮罩 */
+    #trip-header::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(0,0,0,.15) 0%,
+        rgba(0,0,0,.55) 100%
+      );
+      pointer-events: none;
     }
 
-    .trip-header-overlay {
-      width: 100%;
-      padding: 16px;
-      background: linear-gradient(transparent, rgba(0,0,0,0.6));
-      color: white;
+    /* 頂部工具列 */
+    .header-toolbar {
+      position: absolute; top: 0; left: 0; right: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px;
+      z-index: 2;
     }
 
-    .trip-header-overlay h1 {
-      margin: 0;
-      font-size: 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .trip-header-overlay p {
-      margin: 4px 0 0;
-      font-size: 0.85rem;
-      opacity: 0.9;
-    }
-
-    /* ===== 狀態標籤 ===== */
-    .trip-status-badge {
-      display: inline-block;
-      padding: 2px 10px;
-      border-radius: 12px;
-      font-size: 0.75rem;
-      font-weight: bold;
-      margin-left: 8px;
-      vertical-align: middle;
-    }
-    .status-upcoming  { background: #e0f0ff; color: #0077cc; }
-    .status-ongoing   { background: #e0ffe0; color: #007700; }
-    .status-completed { background: #f0f0f0; color: #555555; }
-
-    /* ===== 分頁導航 ===== */
-    .tab-nav {
-      display: flex;
-      overflow-x: auto;
-      background: #fff;
-      border-bottom: 2px solid #eee;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .tab-nav button {
-      flex: 1;
-      min-width: 64px;
-      padding: 12px 8px;
-      border: none;
-      background: none;
-      cursor: pointer;
-      font-size: 0.8rem;
-      color: #888;
-      border-bottom: 3px solid transparent;
-      transition: all 0.2s;
-      white-space: nowrap;
-    }
-
-    .tab-nav button:hover {
-      color: #333;
-      background: #f9f9f9;
-    }
-
-    .tab-nav button.active {
-      color: #ff6b35;
-      border-bottom: 3px solid #ff6b35;
-      font-weight: bold;
-    }
-
-    .tab-nav button.hidden {
-      display: none;
-    }
-
-    /* ===== 分頁內容 ===== */
-    .tab-content {
-      display: none;
-      padding: 16px;
-      min-height: 60vh;
-    }
-
-    .tab-content.active {
-      display: block;
-    }
-
-    /* ===== 載入中 ===== */
-    .loading-screen {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 60vh;
-      color: #888;
-      font-size: 1rem;
-      gap: 12px;
-    }
-
-    .spinner {
-      width: 36px;
-      height: 36px;
-      border: 4px solid #eee;
-      border-top-color: #ff6b35;
+    .header-icon-btn {
+      width: 36px; height: 36px;
+      background: rgba(255,255,255,.18);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,.25);
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--white);
+      cursor: pointer; border: none;
+      transition: background .2s;
+    }
+    .header-icon-btn:hover { background: rgba(255,255,255,.28); }
+
+    .header-right-actions { display: flex; gap: 8px; }
+
+    /* 行程資訊區 */
+    .header-info {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 16px 20px 20px;
+      z-index: 2;
+      color: var(--white);
     }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    .trip-emoji-badge {
+      display: inline-flex;
+      align-items: center; justify-content: center;
+      width: 44px; height: 44px;
+      background: rgba(255,255,255,.2);
+      backdrop-filter: blur(8px);
+      border: 2px solid rgba(255,255,255,.4);
+      border-radius: 12px;
+      font-size: 24px;
+      margin-bottom: 8px;
     }
 
-    /* ===== 錯誤畫面 ===== */
-    .error-screen {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 60vh;
-      color: #cc0000;
-      font-size: 1rem;
-      gap: 12px;
+    #trip-name {
+      font-size: 22px; font-weight: 800;
+      line-height: 1.2;
+      text-shadow: 0 1px 4px rgba(0,0,0,.3);
+      margin-bottom: 6px;
+    }
+
+    .trip-meta-row {
+      display: flex; align-items: center;
+      flex-wrap: wrap; gap: 10px;
+    }
+
+    .trip-meta-item {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 12px;
+      color: rgba(255,255,255,.88);
+    }
+    /* lucide icon 在 meta-item 中的大小 */
+    .trip-meta-item svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 9px;
+      border-radius: 99px;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: .03em;
+    }
+    .status-badge svg { width: 11px; height: 11px; }
+
+    .status-planning  { background: rgba(246,173,85,.25); color: #f6ad55; }
+    .status-active    { background: rgba(72,187,120,.25); color: #68d391; }
+    .status-completed { background: rgba(160,174,192,.25); color: #a0aec0; }
+    .status-cancelled { background: rgba(252,129,74,.25);  color: #fc814a; }
+
+    /* ── Tab Navigation ───────────────────────────────────────── */
+    #tab-bar {
+      position: sticky; top: 0; z-index: 100;
+      display: flex;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      box-shadow: var(--shadow-sm);
+      height: var(--tab-bar-h);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    #tab-bar::-webkit-scrollbar { display: none; }
+
+    .tab-btn {
+      flex: 1; min-width: 64px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 3px;
+      border: none; background: transparent;
+      cursor: pointer;
+      padding: 8px 4px;
+      position: relative;
+      color: var(--gray-400);
+      transition: color .2s;
+      font-family: inherit;
+    }
+
+    .tab-btn svg { width: 22px; height: 22px; transition: color .2s; }
+
+    .tab-btn .tab-label {
+      font-size: 10px; font-weight: 600;
+      letter-spacing: .02em;
+    }
+
+    .tab-btn::after {
+      content: '';
+      position: absolute; bottom: 0; left: 10%; right: 10%;
+      height: 2.5px;
+      background: var(--teal-700);
+      border-radius: 2px 2px 0 0;
+      transform: scaleX(0);
+      transition: transform .25s ease;
+    }
+
+    .tab-btn.active {
+      color: var(--teal-700);
+    }
+    .tab-btn.active::after { transform: scaleX(1); }
+
+    /* ── Tab Panels ───────────────────────────────────────────── */
+    #tab-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 16px calc(var(--tab-bar-h) + 20px);
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* 空狀態卡片 */
+    .empty-state {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 240px; gap: 12px;
       text-align: center;
-      padding: 24px;
+      padding: 32px 16px;
     }
+    .empty-icon {
+      width: 64px; height: 64px;
+      background: var(--teal-100);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--teal-700);
+    }
+    .empty-icon svg { width: 30px; height: 30px; }
+    .empty-title { font-size: 16px; font-weight: 700; color: var(--gray-700); }
+    .empty-desc  { font-size: 13px; color: var(--gray-400); line-height: 1.6; max-width: 220px; }
+
+    /* 通用卡片 */
+    .card {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-200);
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .card-title {
+      font-size: 13px; font-weight: 700;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 12px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .card-title svg { width: 14px; height: 14px; }
+
+    /* ── 權限提示橫幅 ─────────────────────────────────────────── */
+    .permission-banner {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px;
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+      font-size: 13px; color: #92400e;
+    }
+    .permission-banner svg { width: 16px; height: 16px; flex-shrink: 0; color: #f59e0b; }
   </style>
 </head>
 
 <body>
 
-  <!-- 載入中畫面 -->
-  <div id="loadingScreen" class="loading-screen">
-    <div class="spinner"></div>
-    <p>載入行程中...</p>
+<!-- ① Loading Overlay ──────────────────────────────────────────── -->
+<div id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <p class="loading-text">行程資料載入中…</p>
+</div>
+
+<!-- ② Error Screen ─────────────────────────────────────────────── -->
+<div id="error-screen">
+  <div class="error-icon">
+    <i data-lucide="triangle-alert" style="width:28px;height:28px;"></i>
   </div>
+  <p class="error-title">無法載入行程</p>
+  <p class="error-msg" id="error-msg-text">找不到此行程，或您沒有存取權限。</p>
+  <a href="index.html" class="btn-back">
+    <i data-lucide="arrow-left" style="width:16px;height:16px;"></i>
+    返回首頁
+  </a>
+</div>
 
-  <!-- 錯誤畫面 -->
-  <div id="errorScreen" class="error-screen">
-    <p id="errorMessage">發生錯誤，請稍後再試。</p>
-    <button onclick="window.location.href='index.html'">返回首頁</button>
-  </div>
+<!-- ③ App Shell ─────────────────────────────────────────────────── -->
+<div id="app">
 
-  <!-- 主要內容（載入完成後顯示） -->
-  <div id="mainContent" style="display:none;">
+  <!-- Hero Header -->
+  <header id="trip-header">
+    <div id="header-cover"></div>
 
-    <!-- 頂部行程封面與資訊 -->
-    <div class="trip-header" id="tripHeader">
-      <div class="trip-header-overlay">
-        <h1>
-          <span id="tripEmoji">✈️</span>
-          <span id="tripName">行程名稱</span>
-          <span id="tripStatusBadge" class="trip-status-badge"></span>
-        </h1>
-        <p id="tripDates">日期載入中...</p>
+    <!-- 頂部工具列 -->
+    <div class="header-toolbar">
+      <button class="header-icon-btn" onclick="history.back()" title="返回">
+        <i data-lucide="arrow-left" style="width:18px;height:18px;"></i>
+      </button>
+      <div class="header-right-actions">
+        <button class="header-icon-btn" id="btn-share" title="分享行程">
+          <i data-lucide="share-2" style="width:18px;height:18px;"></i>
+        </button>
+        <button class="header-icon-btn" id="btn-edit" title="編輯行程" style="display:none;">
+          <i data-lucide="pencil" style="width:18px;height:18px;"></i>
+        </button>
       </div>
     </div>
 
-    <!-- 分頁導航列 -->
-    <nav class="tab-nav" id="tabNav">
-      <button id="tab-itinerary"  onclick="switchTab('itinerary')" >📅 行程</button>
-      <button id="tab-expense"    onclick="switchTab('expense')"   >💰 費用</button>
-      <button id="tab-shopping"   onclick="switchTab('shopping')"  >🛍️ 購物</button>
-      <button id="tab-info"       onclick="switchTab('info')"      >ℹ️ 資訊</button>
-      <button id="tab-tools"      onclick="switchTab('tools')"     >🔧 工具</button>
-    </nav>
+    <!-- 行程資訊 -->
+    <div class="header-info">
+      <div class="trip-emoji-badge" id="trip-emoji">✈️</div>
+      <h1 id="trip-name">行程名稱</h1>
+      <div class="trip-meta-row">
+        <span class="trip-meta-item" id="meta-date">
+          <i data-lucide="calendar" style="width:13px;height:13px;"></i>
+          <span>日期載入中</span>
+        </span>
+        <span class="trip-meta-item" id="meta-dest">
+          <i data-lucide="map-pin" style="width:13px;height:13px;"></i>
+          <span>目的地</span>
+        </span>
+        <span class="status-badge status-planning" id="status-badge">
+          <i data-lucide="clock" style="width:11px;height:11px;"></i>
+          <span>規劃中</span>
+        </span>
+      </div>
+    </div>
+  </header>
 
-    <!-- 分頁內容區塊（Step B 填入） -->
-    <div id="content-itinerary" class="tab-content"></div>
-    <div id="content-expense"   class="tab-content"></div>
-    <div id="content-shopping"  class="tab-content"></div>
-    <div id="content-info"      class="tab-content"></div>
-    <div id="content-tools"     class="tab-content"></div>
+  <!-- Tab Navigation -->
+  <nav id="tab-bar">
 
-  </div>
+    <button class="tab-btn active" data-tab="itinerary">
+      <i data-lucide="map" style="width:22px;height:22px;"></i>
+      <span class="tab-label">行程</span>
+    </button>
 
-  <!-- JS -->
-  <script src="js/auth.js"></script>
-  <script src="js/trip.js"></script>
+    <button class="tab-btn" data-tab="expense">
+      <i data-lucide="wallet" style="width:22px;height:22px;"></i>
+      <span class="tab-label">費用</span>
+    </button>
+
+    <button class="tab-btn" data-tab="shopping">
+      <i data-lucide="shopping-bag" style="width:22px;height:22px;"></i>
+      <span class="tab-label">購物</span>
+    </button>
+
+    <button class="tab-btn" data-tab="info">
+      <i data-lucide="info" style="width:22px;height:22px;"></i>
+      <span class="tab-label">資訊</span>
+    </button>
+
+    <button class="tab-btn" data-tab="tools">
+      <i data-lucide="wrench" style="width:22px;height:22px;"></i>
+      <span class="tab-label">工具</span>
+    </button>
+
+  </nav>
+
+  <!-- Tab Content -->
+  <main id="tab-content">
+
+    <!-- 行程 Tab -->
+    <section class="tab-panel active" id="panel-itinerary">
+      <div class="empty-state">
+        <div class="empty-icon">
+          <i data-lucide="map" style="width:30px;height:30px;"></i>
+        </div>
+        <p class="empty-title">尚無行程安排</p>
+        <p class="empty-desc">點擊下方「＋」按鈕，新增第一天的行程吧！</p>
+      </div>
+    </section>
+
+    <!-- 費用 Tab -->
+    <section class="tab-panel" id="panel-expense">
+      <div class="empty-state">
+        <div class="empty-icon">
+          <i data-lucide="wallet" style="width:30px;height:30px;"></i>
+        </div>
+        <p class="empty-title">尚無費用記錄</p>
+        <p class="empty-desc">開始記錄旅途中的每一筆花費。</p>
+      </div>
+    </section>
+
+    <!-- 購物 Tab -->
+    <section class="tab-panel" id="panel-shopping">
+      <div class="empty-state">
+        <div class="empty-icon">
+          <i data-lucide="shopping-bag" style="width:30px;height:30px;"></i>
+        </div>
+        <p class="empty-title">購物清單是空的</p>
+        <p class="empty-desc">把想買的東西加進來，出發前一次確認！</p>
+      </div>
+    </section>
+
+    <!-- 資訊 Tab -->
+    <section class="tab-panel" id="panel-info">
+      <div class="empty-state">
+        <div class="empty-icon">
+          <i data-lucide="info" style="width:30px;height:30px;"></i>
+        </div>
+        <p class="empty-title">尚無旅遊資訊</p>
+        <p class="empty-desc">可加入簽證、緊急聯絡、住宿等重要資訊。</p>
+      </div>
+    </section>
+
+    <!-- 工具 Tab -->
+    <section class="tab-panel" id="panel-tools">
+      <div class="empty-state">
+        <div class="empty-icon">
+          <i data-lucide="wrench" style="width:30px;height:30px;"></i>
+        </div>
+        <p class="empty-title">工具箱</p>
+        <p class="empty-desc">匯率換算、時差查詢等實用工具即將上線。</p>
+      </div>
+    </section>
+
+  </main>
+</div><!-- /#app -->
+
+
+<script>
+  // ── 初始化 Lucide Icons ───────────────────────────────────────
+  // 頁面解析完成後立即渲染所有 data-lucide 圖示
+  lucide.createIcons();
+
+  // ── Tab 切換 ─────────────────────────────────────────────────
+  const tabBar     = document.getElementById('tab-bar');
+  const tabBtns    = tabBar.querySelectorAll('.tab-btn');
+  const tabPanels  = document.querySelectorAll('.tab-panel');
+
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.tab;
+
+      tabBtns.forEach(b => b.classList.remove('active'));
+      tabPanels.forEach(p => p.classList.remove('active'));
+
+      btn.classList.add('active');
+      document.getElementById(`panel-${target}`).classList.add('active');
+    });
+  });
+
+  // ── 公用函式：重新渲染動態插入的 Lucide 圖示 ──────────────────
+  // 在 trip.js 動態插入 HTML 後呼叫此函式
+  window.refreshIcons = () => lucide.createIcons();
+
+  // ── Cover Image 淡入 ─────────────────────────────────────────
+  window.setHeaderCover = (url) => {
+    if (!url) return;
+    const cover = document.getElementById('header-cover');
+    const img   = new Image();
+    img.onload  = () => {
+      cover.style.backgroundImage = `url(${url})`;
+      cover.classList.add('loaded');
+    };
+    img.src = url;
+  };
+
+  // ── 狀態徽章設定 ─────────────────────────────────────────────
+  const STATUS_MAP = {
+    planning:  { cls: 'status-planning',  icon: 'clock',         label: '規劃中' },
+    active:    { cls: 'status-active',    icon: 'plane',         label: '進行中' },
+    completed: { cls: 'status-completed', icon: 'check-circle',  label: '已結束' },
+    cancelled: { cls: 'status-cancelled', icon: 'x-circle',      label: '已取消' },
+  };
+
+  window.setStatusBadge = (status) => {
+    const badge = document.getElementById('status-badge');
+    const cfg   = STATUS_MAP[status] || STATUS_MAP.planning;
+
+    // 清除舊 class
+    Object.values(STATUS_MAP).forEach(c => badge.classList.remove(c.cls));
+    badge.classList.add(cfg.cls);
+
+    badge.innerHTML = `
+      <i data-lucide="${cfg.icon}" style="width:11px;height:11px;"></i>
+      <span>${cfg.label}</span>
+    `;
+    lucide.createIcons({ nodes: [badge] });
+  };
+
+  // ── App 顯示 / 隱藏 控制 ────────────────────────────────────
+  window.showApp = () => {
+    document.getElementById('loading-overlay').classList.add('hidden');
+    document.getElementById('app').classList.add('visible');
+  };
+
+  window.showError = (msg) => {
+    document.getElementById('loading-overlay').classList.add('hidden');
+    const screen = document.getElementById('error-screen');
+    if (msg) document.getElementById('error-msg-text').textContent = msg;
+    screen.classList.add('visible');
+  };
+</script>
+
+<!-- trip.js 在最後載入，負責資料初始化 -->
+<script type="module" src="js/trip.js"></script>
 
 </body>
 </html>
