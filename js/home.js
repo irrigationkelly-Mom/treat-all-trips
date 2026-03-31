@@ -1,45 +1,12 @@
-// js/home.js — import getMagicLinkRedirect
-import { 
-  supabase, 
-  getBaseUrl,
-  getMagicLinkRedirect,  // ← add this
-  sendMagicLink, 
-  waitForSession, 
-  getAuthContext, 
-  signOut 
+// js/home.js
+import {
+  supabase,
+  getMagicLinkRedirect,
+  sendMagicLink,
+  waitForSession,
+  signOut,
+  onAuthStateChange   // ✅ 補上這個
 } from './auth.js';
-
-// ── Magic Link 發送處理 ────────────────────────────────────────────────────────
-async function handleSendMagicLink() {
-  const emailInput = document.getElementById('auth-email');
-  const email = emailInput?.value?.trim() ?? '';
-  
-  if (!email) {
-    showAuthMessage('請輸入電子郵件地址', 'error');
-    return;
-  }
-
-  const btn = document.getElementById('send-magic-link-btn');
-  setButtonLoading(btn, true, '發送中⋯');
-
-  // ✅ Use getMagicLinkRedirect() — matches whitelisted URL exactly
-  const { error } = await sendMagicLink(email, getMagicLinkRedirect());
-
-  setButtonLoading(btn, false, '發送登入連結');
-
-  if (error) {
-    showAuthMessage(`發送失敗：${error.message}`, 'error');
-    return;
-  }
-
-  // Show "sent" state
-  const sentEmailDisplay = document.getElementById('sent-email-display');
-  if (sentEmailDisplay) sentEmailDisplay.textContent = email;
-  
-  document.getElementById('magic-link-form')?.classList.add('hidden');
-  document.getElementById('magic-link-sent')?.classList.remove('hidden');
-}
-
 
 // ═══════════════════════════════════════════════════
 // DOM 元素
@@ -75,34 +42,28 @@ let homeShown = false
 // 畫面切換輔助
 // ═══════════════════════════════════════════════════
 
-/** 隱藏載入遮罩 */
 function hideLoading() {
   pageLoading?.classList.add('hidden')
 }
 
-/** 顯示登入畫面 */
 function showAuth() {
   hideLoading()
   authScreen?.classList.remove('hidden')
   homeScreen?.classList.add('hidden')
 }
 
-/** 顯示主頁畫面 */
 async function showHome(user) {
-  if (homeShown) return   // ← 防止重複執行
+  if (homeShown) return
   homeShown = true
 
   hideLoading()
   authScreen?.classList.add('hidden')
   homeScreen?.classList.remove('hidden')
 
-  // 顯示用戶 Email
   if (userEmailDisp) userEmailDisp.textContent = user.email ?? ''
-
-  // 預設隱藏管理按鈕
   adminBtn?.classList.add('hidden')
 
-  // 取得 Profile
+  // ✅ 使用本地定義的 getUserProfile
   const profile = await getUserProfile(user.id)
 
   if (profile?.is_platform_admin) {
@@ -113,14 +74,39 @@ async function showHome(user) {
 }
 
 // ═══════════════════════════════════════════════════
+// ✅ getUserProfile — 直接用已 import 的 supabase
+// ═══════════════════════════════════════════════════
+async function getUserProfile(userId) {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, display_name, avatar_url, is_platform_admin')
+      .eq('id', userId)
+      .single()
+
+    if (error) {
+      // PGRST116 = 查無此筆，屬正常（新用戶尚無 profile）
+      if (error.code !== 'PGRST116') {
+        console.warn('[home] getUserProfile 錯誤:', error.message)
+      }
+      return null
+    }
+
+    return data
+  } catch (err) {
+    console.error('[home] getUserProfile 例外:', err)
+    return null
+  }
+}
+
+// ═══════════════════════════════════════════════════
 // 初始化
 // ═══════════════════════════════════════════════════
 async function init() {
   console.log('[home] init() 開始')
 
-  // waitForSession 處理 Magic Link 回調與 localStorage session
   const session = await waitForSession()
-  console.log('[home] waitForSession 完成，user:', session?.user?.email ?? '無')
+  console.log('[home] session:', session?.user?.email ?? '無')
 
   if (session?.user) {
     await showHome(session.user)
@@ -128,7 +114,7 @@ async function init() {
     showAuth()
   }
 
-  // 監聽後續狀態變化
+  // ✅ onAuthStateChange 現在已正確 import
   onAuthStateChange(async (event, newSession) => {
     console.log('[home] Auth event:', event, newSession?.user?.email ?? '—')
 
@@ -145,7 +131,6 @@ async function init() {
 // 載入旅行列表
 // ═══════════════════════════════════════════════════
 async function loadTrips(userId, isAdmin) {
-  // 顯示載入狀態
   tripsLoading?.classList.remove('hidden')
   tripsEmpty?.classList.add('hidden')
   tripsList?.classList.add('hidden')
@@ -155,7 +140,6 @@ async function loadTrips(userId, isAdmin) {
     let trips = []
 
     if (isAdmin) {
-      // 管理員：顯示所有旅行
       const { data, error } = await supabase
         .from('trips')
         .select('*')
@@ -165,7 +149,6 @@ async function loadTrips(userId, isAdmin) {
       trips = data ?? []
 
     } else {
-      // 一般成員：透過 trip_members 關聯取得
       const { data, error } = await supabase
         .from('trip_members')
         .select(`
@@ -236,7 +219,6 @@ function createTripCard(trip) {
   `
 
   const navigate = () => { location.href = `trip.html?id=${trip.id}` }
-
   card.addEventListener('click', navigate)
   card.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -317,29 +299,18 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())
 }
 
-/**
- * 顯示登入表單的錯誤 / 成功訊息
- * @param {string} msg
- * @param {'info'|'success'|'error'} type
- */
 function showAuthMessage(msg, type = 'info') {
   if (!authMessage) return
   authMessage.textContent = msg
-  // 先移除所有狀態 class，再加入對應的
   authMessage.className = `auth-message auth-message-${type}`
-
-  if (msg) {
-    authMessage.classList.remove('hidden')
-  } else {
-    authMessage.classList.add('hidden')
-  }
+  authMessage.classList.toggle('hidden', !msg)
 }
 
 // ═══════════════════════════════════════════════════
 // 事件監聽
 // ═══════════════════════════════════════════════════
 
-// 發送 Magic Link
+// ✅ 統一由這裡處理，移除重複的 handleSendMagicLink
 sendBtn?.addEventListener('click', async () => {
   const email = emailInput?.value?.trim() ?? ''
 
@@ -350,8 +321,11 @@ sendBtn?.addEventListener('click', async () => {
   sendBtn.textContent = '發送中⋯'
   showAuthMessage('', 'info')
 
-  // 使用 auth.js 封裝的 sendMagicLink（內建 redirectTo 計算）
-  const { error } = await sendMagicLink(email)
+  // getMagicLinkRedirect() 確保 redirectTo 與 Supabase 白名單完全一致
+  const redirectTo = getMagicLinkRedirect()
+  console.log('[home] Magic Link redirectTo:', redirectTo)
+
+  const { error } = await sendMagicLink(email, redirectTo)
 
   sendBtn.disabled    = false
   sendBtn.textContent = '發送登入連結'
@@ -361,18 +335,15 @@ sendBtn?.addEventListener('click', async () => {
     return
   }
 
-  // 切換到「已發送」狀態
   if (sentEmailDisp) sentEmailDisp.textContent = email
   magicForm?.classList.add('hidden')
   magicSent?.classList.remove('hidden')
 })
 
-// Enter 鍵觸發
 emailInput?.addEventListener('keydown', e => {
   if (e.key === 'Enter') sendBtn?.click()
 })
 
-// 重新發送（回到輸入表單）
 resendBtn?.addEventListener('click', () => {
   magicSent?.classList.add('hidden')
   magicForm?.classList.remove('hidden')
@@ -382,12 +353,10 @@ resendBtn?.addEventListener('click', () => {
   }
 })
 
-// 管理後台
 adminBtn?.addEventListener('click', () => {
   location.href = 'admin.html'
 })
 
-// 登出（使用 auth.js 封裝，會自動跳轉）
 logoutBtn?.addEventListener('click', async () => {
   if (!confirm('確定要登出嗎？')) return
   await signOut()
