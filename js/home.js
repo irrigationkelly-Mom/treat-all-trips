@@ -2,171 +2,326 @@
 import {
   supabase,
   waitForSession,
-  onAuthStateChange,
-  sendMagicLink,
-  signOut,
   isValidEmail,
-} from './auth.js';
+  getUserProfile,
+  getMagicLinkRedirect,
+  joinPath,
+  getBaseUrl,
+  signOut
+} from './auth.js'
 
-const ADMIN_UUID = 'e8f65f02-5726-4b52-baca-ba0359efd1eb';
+// ============================================================
+// DOM Helpers
+// ============================================================
 
-const pageLoading    = document.getElementById('page-loading');
-const authSection    = document.getElementById('auth-section');
-const appSection     = document.getElementById('app-section');
-const emailInput     = document.getElementById('email-input');
-const sendBtn        = document.getElementById('send-magic-link');
-const authMsg        = document.getElementById('auth-message');
-const signOutBtn     = document.getElementById('sign-out-btn');
-const tripsContainer = document.getElementById('trips-container');
-const userEmailEl    = document.getElementById('user-email');
+/** 取得 DOM 元素，找不到時 console.warn */
+function $(id) {
+  const el = document.getElementById(id)
+  if (!el) console.warn(`[home] element #${id} not found`)
+  return el
+}
 
-function showPage(page) {
-  pageLoading.classList.add('hidden');
-  if (page === 'auth') {
-    authSection.classList.remove('hidden');
-    appSection.classList.add('hidden');
-  } else {
-    authSection.classList.add('hidden');
-    appSection.classList.remove('hidden');
+function showScreen(screenId) {
+  const screens = ['screen-login', 'screen-sent', 'screen-home']
+  screens.forEach((id) => {
+    const el = $(id)
+    if (el) el.classList.toggle('hidden', id !== screenId)
+  })
+}
+
+function showLoading() {
+  const el = $('page-loading')
+  if (el) el.classList.remove('hidden')
+}
+
+function hideLoading() {
+  const el = $('page-loading')
+  if (el) el.classList.add('hidden')
+}
+
+function showToast(message, type = 'info') {
+  // 若頁面有 toast 容器則使用，否則 fallback 到 alert
+  const container = document.getElementById('toast-container')
+  if (!container) {
+    if (type === 'error') console.error(message)
+    else console.log(message)
+    return
   }
+
+  const toast = document.createElement('div')
+  toast.className = `toast toast--${type}`
+  toast.textContent = message
+  container.appendChild(toast)
+
+  // 自動移除
+  setTimeout(() => {
+    toast.classList.add('toast--fade')
+    setTimeout(() => toast.remove(), 400)
+  }, 3000)
 }
 
-async function getUserProfile(userId) {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
-  if (error) return null;
-  return data;
+// ============================================================
+// Login Screen
+// ============================================================
+
+function initLoginScreen() {
+  const emailInput = $('input-email')
+  const sendBtn = $('btn-send-magic-link')
+  const errorMsg = $('login-error')
+
+  if (!emailInput || !sendBtn) return
+
+  // 清除錯誤訊息
+  function clearError() {
+    if (errorMsg) {
+      errorMsg.textContent = ''
+      errorMsg.classList.add('hidden')
+    }
+  }
+
+  function setError(msg) {
+    if (errorMsg) {
+      errorMsg.textContent = msg
+      errorMsg.classList.remove('hidden')
+    }
+  }
+
+  function setButtonLoading(loading) {
+    sendBtn.disabled = loading
+    sendBtn.textContent = loading ? '傳送中…' : '傳送魔法連結'
+  }
+
+  sendBtn.addEventListener('click', async () => {
+    clearError()
+    const email = emailInput.value.trim()
+
+    if (!isValidEmail(email)) {
+      setError('請輸入有效的電子郵件地址')
+      emailInput.focus()
+      return
+    }
+
+    setButtonLoading(true)
+
+    try {
+      const redirectTo = getMagicLinkRedirect()
+      console.log('[home] magic link redirect →', redirectTo)
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: redirectTo }
+      })
+
+      if (error) {
+        console.error('[home] signInWithOtp error:', error.message)
+        setError('傳送失敗，請稍後再試。')
+        return
+      }
+
+      showScreen('screen-sent')
+    } catch (err) {
+      console.error('[home] unexpected error:', err)
+      setError('發生未預期的錯誤，請重試。')
+    } finally {
+      setButtonLoading(false)
+    }
+  })
+
+  // Enter 鍵觸發
+  emailInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendBtn.click()
+  })
 }
 
-async function loadTrips(userId, isAdmin) {
-  let query;
-  if (isAdmin) {
-    query = supabase
-      .from('trips')
-      .select('*')
-      .order('start_date', { ascending: true });
-  } else {
-    query = supabase
+// ============================================================
+// Sent Screen
+// ============================================================
+
+function initSentScreen() {
+  const backBtn = $('btn-back-to-login')
+  if (!backBtn) return
+
+  backBtn.addEventListener('click', () => {
+    showScreen('screen-login')
+  })
+}
+
+// ============================================================
+// Home Screen
+// ============================================================
+
+async function renderHome(session) {
+  const profile = await getUserProfile(session.user.id)
+  const displayName = profile?.display_name || session.user.email
+
+  // 顯示使用者名稱
+  const nameEl = $('user-display-name')
+  if (nameEl) nameEl.textContent = displayName
+
+  // 登出按鈕
+  const signOutBtn = $('btn-sign-out')
+  if (signOutBtn) {
+    signOutBtn.addEventListener('click', async () => {
+      signOutBtn.disabled = true
+      signOutBtn.textContent = '登出中…'
+      await signOut()
+    })
+  }
+
+  // 載入行程列表
+  await renderTripList(session.user.id)
+}
+
+async function renderTripList(userId) {
+  const listEl = $('trip-list')
+  const emptyEl = $('trip-list-empty')
+  const loadingEl = $('trip-list-loading')
+
+  if (!listEl) return
+
+  // 顯示載入中狀態
+  if (loadingEl) loadingEl.classList.remove('hidden')
+  if (emptyEl) emptyEl.classList.add('hidden')
+  listEl.innerHTML = ''
+
+  try {
+    // 取得使用者參與的所有行程
+    const { data: memberships, error } = await supabase
       .from('trip_members')
-      .select('trip_id, trips(*)')
-      .eq('user_id', userId);
-  }
+      .select(`
+        role,
+        trips (
+          id,
+          title,
+          destination,
+          start_date,
+          end_date,
+          cover_image_url
+        )
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
 
-  const { data, error } = await query;
-  if (error) {
-    console.error('loadTrips error:', error);
-    return [];
-  }
+    if (error) {
+      console.error('[home] renderTripList error:', error.message)
+      showToast('無法載入行程，請重新整理', 'error')
+      return
+    }
 
-  if (isAdmin) return data;
-  return data.map((row) => row.trips).filter(Boolean);
-}
+    const trips = memberships?.map((m) => ({ ...m.trips, role: m.role })) ?? []
 
-function getCountdown(startDate, endDate) {
-  const now   = new Date();
-  const start = new Date(startDate);
-  const end   = new Date(endDate);
+    if (trips.length === 0) {
+      if (emptyEl) emptyEl.classList.remove('hidden')
+      return
+    }
 
-  if (now < start) {
-    const days = Math.ceil((start - now) / 86400000);
-    if (days <= 7) return { label: `${days}天後出發`, cls: 'countdown-soon' };
-    return { label: `${days}天後`, cls: 'countdown-future' };
+    // 渲染行程卡片
+    trips.forEach((trip) => {
+      const card = createTripCard(trip)
+      listEl.appendChild(card)
+    })
+  } finally {
+    if (loadingEl) loadingEl.classList.add('hidden')
   }
-  if (now <= end) {
-    return { label: '旅行中 ✈️', cls: 'countdown-active' };
-  }
-  return { label: '已結束', cls: 'countdown-past' };
 }
 
 function createTripCard(trip) {
-  const cd   = getCountdown(trip.start_date, trip.end_date);
-  const card = document.createElement('div');
-  card.className = 'trip-card';
+  const baseUrl = getBaseUrl()
+  const tripUrl = joinPath(baseUrl, `trip.html?id=${trip.id}`)
+
+  const card = document.createElement('a')
+  card.href = tripUrl
+  card.className = 'trip-card'
+  card.setAttribute('aria-label', trip.title)
+
+  const dateText = formatDateRange(trip.start_date, trip.end_date)
+
   card.innerHTML = `
-    <div class="trip-card-header">
-      <span class="countdown-badge ${cd.cls}">${cd.label}</span>
+    <div class="trip-card__cover" style="${
+      trip.cover_image_url
+        ? `background-image: url('${trip.cover_image_url}')`
+        : ''
+    }">
+      ${!trip.cover_image_url ? '<span class="trip-card__cover-icon">✈️</span>' : ''}
     </div>
-    <h3 class="trip-title">${trip.name}</h3>
-    <p class="trip-dates">${trip.start_date} ～ ${trip.end_date}</p>
-  `;
-  card.addEventListener('click', () => {
-    window.location.href = `trip.html?id=${trip.id}`;
-  });
-  return card;
+    <div class="trip-card__body">
+      <h3 class="trip-card__title">${escapeHtml(trip.title)}</h3>
+      ${trip.destination ? `<p class="trip-card__destination">📍 ${escapeHtml(trip.destination)}</p>` : ''}
+      ${dateText ? `<p class="trip-card__date">🗓 ${dateText}</p>` : ''}
+      <span class="trip-card__role trip-card__role--${trip.role}">${formatRole(trip.role)}</span>
+    </div>
+  `
+
+  return card
 }
 
-function renderTrips(trips) {
-  tripsContainer.innerHTML = '';
-  if (!trips.length) {
-    tripsContainer.innerHTML = `
-      <div class="empty-state">
-        <p>目前還沒有行程</p>
-      </div>`;
-    return;
-  }
-  trips.forEach((t) => tripsContainer.appendChild(createTripCard(t)));
+// ============================================================
+// Utilities
+// ============================================================
+
+function formatDateRange(start, end) {
+  if (!start) return ''
+  const fmt = (d) =>
+    new Date(d).toLocaleDateString('zh-TW', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  if (!end) return fmt(start)
+  return `${fmt(start)} – ${fmt(end)}`
 }
 
-async function handleSignedIn(session) {
-  const userId  = session.user.id;
-  const isAdmin = userId === ADMIN_UUID;
-
-  if (userEmailEl) userEmailEl.textContent = session.user.email;
-
-  showPage('app');
-
-  const trips = await loadTrips(userId, isAdmin);
-  renderTrips(trips);
+function formatRole(role) {
+  const map = {
+    owner: '建立者',
+    editor: '編輯者',
+    viewer: '檢視者'
+  }
+  return map[role] ?? role
 }
 
-sendBtn?.addEventListener('click', async () => {
-  const email = emailInput?.value?.trim();
-  if (!isValidEmail(email)) {
-    authMsg.textContent = '請輸入正確的 Email';
-    authMsg.className   = 'auth-message error';
-    return;
-  }
+function escapeHtml(str) {
+  if (!str) return ''
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
 
-  sendBtn.disabled    = true;
-  authMsg.textContent = '發送中...';
-  authMsg.className   = 'auth-message';
-
-  const { error } = await sendMagicLink(email);
-
-  if (error) {
-    authMsg.textContent = `發送失敗：${error.message}`;
-    authMsg.className   = 'auth-message error';
-    sendBtn.disabled    = false;
-  } else {
-    authMsg.textContent = '✅ 已發送！請檢查你的信箱';
-    authMsg.className   = 'auth-message success';
-  }
-});
-
-signOutBtn?.addEventListener('click', async () => {
-  await signOut();
-  showPage('auth');
-});
+// ============================================================
+// Init
+// ============================================================
 
 async function init() {
-  const session = await waitForSession();
+  showLoading()
 
-  if (session) {
-    await handleSignedIn(session);
-  } else {
-    showPage('auth');
-  }
+  try {
+    // 初始化各畫面的事件監聽
+    initLoginScreen()
+    initSentScreen()
 
-  onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session) {
-      await handleSignedIn(session);
-    } else if (event === 'SIGNED_OUT') {
-      showPage('auth');
+    // 等待 session
+    const session = await waitForSession()
+
+    if (session) {
+      // 已登入 → 顯示首頁
+      showScreen('screen-home')
+      await renderHome(session)
+    } else {
+      // 未登入 → 顯示登入畫面
+      showScreen('screen-login')
     }
-  });
+  } catch (err) {
+    console.error('[home] init error:', err)
+    showScreen('screen-login')
+    showToast('初始化失敗，請重新整理頁面', 'error')
+  } finally {
+    // 無論如何都要隱藏 loading overlay
+    hideLoading()
+  }
 }
 
-init();
+// 啟動
+init()
