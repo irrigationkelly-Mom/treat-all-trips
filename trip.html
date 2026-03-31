@@ -1,590 +1,209 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>旅遊 - Treat All Trips</title>
-  <link rel="manifest" href="manifest.json" />
+  <title>行程儀表板</title>
+
+  <!-- PWA 相關（manifest.json 待補）-->
+  <!-- <link rel="manifest" href="manifest.json" /> -->
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- 樣式 -->
   <link rel="stylesheet" href="css/style.css" />
-  <link rel="stylesheet" href="css/trip.css" />
+
+  <style>
+    /* ===== 頂部行程資訊列 ===== */
+    .trip-header {
+      position: relative;
+      width: 100%;
+      height: 180px;
+      background-color: #ccc;
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      align-items: flex-end;
+    }
+
+    .trip-header-overlay {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.6));
+      color: white;
+    }
+
+    .trip-header-overlay h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .trip-header-overlay p {
+      margin: 4px 0 0;
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+
+    /* ===== 狀態標籤 ===== */
+    .trip-status-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .status-upcoming  { background: #e0f0ff; color: #0077cc; }
+    .status-ongoing   { background: #e0ffe0; color: #007700; }
+    .status-completed { background: #f0f0f0; color: #555555; }
+
+    /* ===== 分頁導航 ===== */
+    .tab-nav {
+      display: flex;
+      overflow-x: auto;
+      background: #fff;
+      border-bottom: 2px solid #eee;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .tab-nav button {
+      flex: 1;
+      min-width: 64px;
+      padding: 12px 8px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: #888;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .tab-nav button:hover {
+      color: #333;
+      background: #f9f9f9;
+    }
+
+    .tab-nav button.active {
+      color: #ff6b35;
+      border-bottom: 3px solid #ff6b35;
+      font-weight: bold;
+    }
+
+    .tab-nav button.hidden {
+      display: none;
+    }
+
+    /* ===== 分頁內容 ===== */
+    .tab-content {
+      display: none;
+      padding: 16px;
+      min-height: 60vh;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* ===== 載入中 ===== */
+    .loading-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 60vh;
+      color: #888;
+      font-size: 1rem;
+      gap: 12px;
+    }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 4px solid #eee;
+      border-top-color: #ff6b35;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ===== 錯誤畫面 ===== */
+    .error-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 60vh;
+      color: #cc0000;
+      font-size: 1rem;
+      gap: 12px;
+      text-align: center;
+      padding: 24px;
+    }
+  </style>
 </head>
+
 <body>
 
-  <!-- ==========================================
-       Loading Mask
-  =========================================== -->
-  <div id="loading-mask" style="display:flex; position:fixed; inset:0;
-       background:rgba(18,18,18,0.85); z-index:9999;
-       align-items:center; justify-content:center; flex-direction:column; gap:12px;">
+  <!-- 載入中畫面 -->
+  <div id="loadingScreen" class="loading-screen">
     <div class="spinner"></div>
-    <p style="color:#e8d5b0; font-size:0.9rem;">載入中…</p>
+    <p>載入行程中...</p>
   </div>
 
-  <!-- ==========================================
-       Unauth Screen
-  =========================================== -->
-  <div id="unauth-screen" class="hidden" style="
-       display:flex; flex-direction:column; align-items:center;
-       justify-content:center; min-height:100vh; gap:16px; padding:40px 20px;">
-    <span style="font-size:3rem;">🔒</span>
-    <h2 style="color:#e8d5b0;">無法存取此旅遊</h2>
-    <p style="color:#8a8a8a; text-align:center;">
-      您可能沒有權限，或此旅遊不存在。
-    </p>
-    <a href="index.html" class="btn-primary">返回首頁</a>
+  <!-- 錯誤畫面 -->
+  <div id="errorScreen" class="error-screen">
+    <p id="errorMessage">發生錯誤，請稍後再試。</p>
+    <button onclick="window.location.href='index.html'">返回首頁</button>
   </div>
 
-  <!-- ==========================================
-       Trip Screen
-  =========================================== -->
-  <div id="trip-screen" class="hidden">
+  <!-- 主要內容（載入完成後顯示） -->
+  <div id="mainContent" style="display:none;">
 
-    <!-- 封面 -->
-    <div id="trip-cover" class="trip-cover">
-      <div class="trip-cover-overlay">
-        <button class="btn-back" onclick="history.back()">← 返回</button>
-
-        <div class="trip-cover-info">
-          <h1 id="trip-name" class="trip-title">旅遊名稱</h1>
-          <p id="trip-destination" class="trip-destination"></p>
-          <p id="trip-dates" class="trip-dates"></p>
-        </div>
-
-        <div class="trip-cover-actions">
-          <button id="edit-trip-btn" class="btn-icon hidden"
-                  onclick="openEditTrip()" title="編輯旅遊">✏️</button>
-          <button id="invite-btn" class="btn-icon hidden"
-                  onclick="openInviteModal()" title="邀請成員">👥</button>
-        </div>
+    <!-- 頂部行程封面與資訊 -->
+    <div class="trip-header" id="tripHeader">
+      <div class="trip-header-overlay">
+        <h1>
+          <span id="tripEmoji">✈️</span>
+          <span id="tripName">行程名稱</span>
+          <span id="tripStatusBadge" class="trip-status-badge"></span>
+        </h1>
+        <p id="tripDates">日期載入中...</p>
       </div>
     </div>
 
-    <!-- 成員頭像列 -->
-    <div class="members-bar">
-      <div id="members-avatars" class="members-avatars"></div>
-    </div>
+    <!-- 分頁導航列 -->
+    <nav class="tab-nav" id="tabNav">
+      <button id="tab-itinerary"  onclick="switchTab('itinerary')" >📅 行程</button>
+      <button id="tab-expense"    onclick="switchTab('expense')"   >💰 費用</button>
+      <button id="tab-shopping"   onclick="switchTab('shopping')"  >🛍️ 購物</button>
+      <button id="tab-info"       onclick="switchTab('info')"      >ℹ️ 資訊</button>
+      <button id="tab-tools"      onclick="switchTab('tools')"     >🔧 工具</button>
+    </nav>
 
-    <!-- 頁籤列 -->
-    <div class="tabs-container">
-      <div class="tabs-scroll">
-        <button class="tab-btn active" data-tab="itinerary">🗺️ 行程</button>
-        <button class="tab-btn" data-tab="expenses">💴 支出</button>
-        <button class="tab-btn" data-tab="shopping">🛍️ 購物</button>
-        <button class="tab-btn" data-tab="packing">🎒 打包</button>
-        <button class="tab-btn" data-tab="memos">📝 備忘</button>
-        <button class="tab-btn" data-tab="info">ℹ️ 資訊</button>
-      </div>
-    </div>
+    <!-- 分頁內容區塊（Step B 填入） -->
+    <div id="content-itinerary" class="tab-content"></div>
+    <div id="content-expense"   class="tab-content"></div>
+    <div id="content-shopping"  class="tab-content"></div>
+    <div id="content-info"      class="tab-content"></div>
+    <div id="content-tools"     class="tab-content"></div>
 
-    <!-- 頁籤內容區 -->
-    <div class="tab-content">
-
-      <!-- ── 行程表 ── -->
-      <div id="tab-itinerary" class="tab-panel">
-        <div class="panel-header">
-          <h2 class="panel-title">行程安排</h2>
-          <button id="add-day-btn" class="btn-primary hidden"
-                  onclick="openAddDayModal()">+ 新增天</button>
-        </div>
-        <div id="itinerary-list" class="itinerary-list"></div>
-      </div>
-
-      <!-- ── 支出管理 ── -->
-      <div id="tab-expenses" class="tab-panel hidden">
-        <div class="panel-header">
-          <h2 class="panel-title">支出管理</h2>
-          <button id="add-expense-btn" class="btn-primary hidden"
-                  onclick="openAddExpenseModal()">+ 新增支出</button>
-        </div>
-
-        <!-- 支出摘要卡 -->
-        <div class="expense-summary-card">
-          <div class="summary-item">
-            <span class="summary-label">總支出</span>
-            <span id="total-amount" class="summary-value">¥0</span>
-          </div>
-          <div class="summary-divider"></div>
-          <div class="summary-item">
-            <span class="summary-label">每人均攤</span>
-            <span id="per-person-amount" class="summary-value">¥0</span>
-          </div>
-          <div class="summary-divider"></div>
-          <div class="summary-item">
-            <button class="btn-settlement" onclick="openSettlementModal()">
-              🧮 結算
-            </button>
-          </div>
-        </div>
-
-        <div id="expenses-list" class="expenses-list"></div>
-      </div>
-
-      <!-- ── 購物清單 ── -->
-      <div id="tab-shopping" class="tab-panel hidden">
-        <div class="panel-header">
-          <h2 class="panel-title">購物清單</h2>
-          <button id="add-shopping-btn" class="btn-primary hidden"
-                  onclick="openAddShoppingModal()">+ 新增</button>
-        </div>
-        <div id="shopping-list" class="shopping-list"></div>
-      </div>
-
-      <!-- ── 打包清單 ── -->
-      <div id="tab-packing" class="tab-panel hidden">
-        <div class="panel-header">
-          <h2 class="panel-title">打包清單</h2>
-          <button id="add-packing-btn" class="btn-primary hidden"
-                  onclick="openAddPackingModal()">+ 新增</button>
-        </div>
-
-        <!-- 打包進度條 -->
-        <div id="packing-progress" class="packing-progress hidden">
-          <div class="progress-bar">
-            <div id="progress-fill" class="progress-fill" style="width:0%"></div>
-          </div>
-          <span id="progress-text" class="progress-text">0 / 0</span>
-        </div>
-
-        <div id="packing-list" class="packing-list"></div>
-      </div>
-
-      <!-- ── 備忘錄 ── -->
-      <div id="tab-memos" class="tab-panel hidden">
-        <div class="panel-header">
-          <h2 class="panel-title">備忘錄</h2>
-          <button id="add-memo-btn" class="btn-primary hidden"
-                  onclick="openAddMemoModal()">+ 新增</button>
-        </div>
-        <div id="memos-list" class="memos-list"></div>
-      </div>
-
-      <!-- ── 旅遊資訊 ── -->
-      <div id="tab-info" class="tab-panel hidden">
-        <div class="panel-header">
-          <h2 class="panel-title">旅遊資訊</h2>
-          <button id="add-info-btn" class="btn-primary hidden"
-                  onclick="openAddInfoModal()">+ 新增</button>
-        </div>
-        <div id="info-list" class="info-list"></div>
-      </div>
-
-    </div><!-- /tab-content -->
-  </div><!-- /trip-screen -->
-
-
-  <!-- ==========================================
-       Modal 背景幕
-  =========================================== -->
-  <div id="modal-backdrop" class="modal-backdrop hidden"
-       onclick="closeAllModals()"></div>
-
-
-  <!-- ==========================================
-       Modal：新增行程天
-  =========================================== -->
-  <div id="modal-add-day" class="modal hidden">
-    <div class="modal-header">
-      <h3>新增行程天</h3>
-      <button class="modal-close" onclick="closeModal('modal-add-day')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>日期 <span class="required">*</span></label>
-        <input type="date" id="day-date" class="form-input" />
-      </div>
-      <div class="form-group">
-        <label>標題（選填）</label>
-        <input type="text" id="day-title" class="form-input"
-               placeholder="例：抵達東京" />
-      </div>
-      <div class="form-group">
-        <label>備注（選填）</label>
-        <textarea id="day-notes" class="form-textarea" rows="3"
-                  placeholder="當天注意事項…"></textarea>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="closeModal('modal-add-day')">取消</button>
-      <button class="btn-primary" onclick="submitAddDay()">新增</button>
-    </div>
   </div>
 
+  <!-- JS -->
+  <script src="js/auth.js"></script>
+  <script src="js/trip.js"></script>
 
-  <!-- ==========================================
-       Modal：新增行程項目
-  =========================================== -->
-  <div id="modal-add-item" class="modal hidden">
-    <input type="hidden" id="item-day-id" />
-    <div class="modal-header">
-      <h3>新增行程項目</h3>
-      <button class="modal-close" onclick="closeModal('modal-add-item')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>名稱 <span class="required">*</span></label>
-        <input type="text" id="item-title" class="form-input"
-               placeholder="例：新幹線 東京→大阪" />
-      </div>
-      <div class="form-group">
-        <label>類別</label>
-        <select id="item-category" class="form-select">
-          <option value="transport">🚄 交通</option>
-          <option value="accommodation">🏨 住宿</option>
-          <option value="food">🍜 餐飲</option>
-          <option value="attraction">🎡 景點</option>
-          <option value="shopping">🛍️ 購物</option>
-          <option value="other">📌 其他</option>
-        </select>
-      </div>
-      <div class="form-row">
-        <div class="form-group flex-1">
-          <label>開始時間</label>
-          <input type="time" id="item-start-time" class="form-input" />
-        </div>
-        <div class="form-group flex-1">
-          <label>結束時間</label>
-          <input type="time" id="item-end-time" class="form-input" />
-        </div>
-      </div>
-      <div class="form-group">
-        <label>地點</label>
-        <input type="text" id="item-location" class="form-input"
-               placeholder="例：東京車站" />
-      </div>
-      <div class="form-group">
-        <label>預估費用</label>
-        <input type="number" id="item-cost" class="form-input"
-               placeholder="0" min="0" />
-      </div>
-      <div class="form-group">
-        <label>訂位代碼</label>
-        <input type="text" id="item-booking" class="form-input"
-               placeholder="可選填" />
-      </div>
-      <div class="form-group">
-        <label>備注</label>
-        <textarea id="item-description" class="form-textarea" rows="2"
-                  placeholder="其他說明…"></textarea>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="closeModal('modal-add-item')">取消</button>
-      <button class="btn-primary" onclick="submitAddItem()">新增</button>
-    </div>
-  </div>
-
-
-  <!-- ==========================================
-       Modal：新增支出
-  =========================================== -->
-  <div id="modal-add-expense" class="modal hidden">
-    <div class="modal-header">
-      <h3>新增支出</h3>
-      <button class="modal-close" onclick="closeModal('modal-add-expense')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>名稱 <span class="required">*</span></label>
-        <input type="text" id="expense-title" class="form-input"
-               placeholder="例：晚餐拉麵" />
-      </div>
-      <div class="form-row">
-        <div class="form-group flex-2">
-          <label>金額 <span class="required">*</span></label>
-          <input type="number" id="expense-amount" class="form-input"
-                 placeholder="0" min="0" />
-        </div>
-        <div class="form-group flex-1">
-          <label>幣別</label>
-          <select id="expense-currency" class="form-select">
-            <option value="JPY">JPY</option>
-            <option value="TWD">TWD</option>
-            <option value="USD">USD</option>
-            <option value="EUR">EUR</option>
-            <option value="KRW">KRW</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>類別</label>
-        <select id="expense-category" class="form-select">
-          <option value="food">🍜 餐飲</option>
-          <option value="transport">🚄 交通</option>
-          <option value="accommodation">🏨 住宿</option>
-          <option value="shopping">🛍️ 購物</option>
-          <option value="attraction">🎡 景點</option>
-          <option value="other">📌 其他</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>日期</label>
-        <input type="date" id="expense-date" class="form-input" />
-      </div>
-      <div class="form-group">
-        <label>由誰付款</label>
-        <select id="expense-paid-by" class="form-select"></select>
-      </div>
-      <div class="form-group">
-        <label>分帳方式</label>
-        <div class="split-type-row">
-          <label class="radio-label">
-            <input type="radio" name="split-type" value="equal"
-                   onchange="toggleSplitDetails('equal')" checked />
-            平均分攤
-          </label>
-          <label class="radio-label">
-            <input type="radio" name="split-type" value="custom"
-                   onchange="toggleSplitDetails('custom')" />
-            個別指定
-          </label>
-        </div>
-        <div id="split-equal-info" class="split-info">
-          將依成員人數平均分配
-        </div>
-        <div id="split-custom-detail" class="split-custom hidden"></div>
-      </div>
-      <div class="form-group">
-        <label>備注</label>
-        <textarea id="expense-notes" class="form-textarea" rows="2"></textarea>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="closeModal('modal-add-expense')">取消</button>
-      <button class="btn-primary" onclick="submitAddExpense()">新增</button>
-    </div>
-  </div>
-
-
-  <!-- ==========================================
-       Modal：結算
-  =========================================== -->
-  <div id="modal-settlement" class="modal hidden">
-    <div class="modal-header">
-      <h3>🧮 結算明細</h3>
-      <button class="modal-close" onclick="closeModal('modal-settlement')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div id="settlement-content" class="settlement-content"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-primary" onclick="closeModal('modal-settlement')">關閉</button>
-    </div>
-  </div>
-
-
-  <!-- ==========================================
-       Modal：新增購物項目
-  =========================================== -->
-  <div id="modal-add-shopping" class="modal hidden">
-    <div class="modal-header">
-      <h3>新增購物項目</h3>
-      <button class="modal-close" onclick="closeModal('modal-add-shopping')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>名稱 <span class="required">*</span></label>
-        <input type="text" id="shopping-name" class="form-input"
-               placeholder="例：抹茶 KitKat" />
-      </div>
-      <div class="form-group">
-        <label>店家</label>
-        <input type="text" id="shopping-store" class="form-input"
-               placeholder="例：唐吉訶德" />
-      </div>
-      <div class="form-row">
-        <div class="form-group flex-2">
-          <label>價格</label>
-          <input type="number" id="shopping-price" class="form-input"
-                 placeholder="0" min="0" />
-        </div>
-        <div class="form-group flex-1">
-          <label>幣別</label>
-          <select id="shopping-currency" class="form-select">
-            <option value="JPY">JPY</option>
-            <option value="TWD">TWD</option>
-            <option value="USD">USD</option>
-            <option value="EUR">EUR</option>
-            <option value="KRW">KRW</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>數量</label>
-        <input type="number" id="shopping-qty" class="form-input"
-               value="1" min="1" />
-      </div>
-      <div class="form-group">
-        <label>指定購買人</label>
-        <select id="shopping-assigned" class="form-select"></select>
-      </div>
-      <div class="form-group">
-        <label class="checkbox-label">
-          <input type="checkbox" id="shopping-tax-refund" />
-          可退稅商品 🧾
-        </label>
-      </div>
-      <div class="form-group">
-        <label>備注</label>
-        <textarea id="shopping-notes" class="form-textarea" rows="2"></textarea>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="closeModal('modal-add-shopping')">取消</button>
-      <button class="btn-primary" onclick="submitAddShopping()">新增</button>
-    </div>
-  </div>
-
-
-  <!-- ==========================================
-       Modal：新增打包項目
-  =========================================== -->
-  <div id="modal-add-packing" class="modal hidden">
-    <div class="modal-header">
-      <h3>新增打包項目</h3>
-      <button class="modal-close" onclick="closeModal('modal-add-packing')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>名稱 <span class="required">*</span></label>
-        <input type="text" id="packing-name" class="form-input"
-               placeholder="例：護照" />
-      </div>
-      <div class="form-group">
-        <label>分類</label>
-        <div class="form-row-gap">
-          <select id="packing-category-id" class="form-select flex-1"></select>
-          <button class="btn-secondary btn-small"
-                  onclick="openAddPackingCategory()">+ 新增分類</button>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>數量</label>
-        <input type="number" id="packing-qty" class="form-input"
-               value="1" min="1" />
-      </div>
-      <div class="form-group">
-        <label>負責人</label>
-        <select id="packing-assigned" class="form-select"></select>
-      </div>
-      <div class="form-group">
-        <label>備注</label>
-        <textarea id="packing-notes" class="form-textarea" rows="2"></textarea>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="closeModal('modal-add-packing')">取消</button>
-      <button class="btn-primary" onclick="submitAddPacking()">新增</button>
-    </div>
-  </div>
-
-
-  <!-- ==========================================
-       Modal：新增備忘錄
-  =========================================== -->
-  <div id="modal-add-memo" class="modal hidden">
-    <div class="modal-header">
-      <h3>新增備忘錄</h3>
-      <button class="modal-close" onclick="closeModal('modal-add-memo')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>標題（選填）</label>
-        <input type="text" id="memo-title" class="form-input"
-               placeholder="例：重要提醒" />
-      </div>
-      <div class="form-group">
-        <label>內容 <span class="required">*</span></label>
-        <textarea id="memo-content" class="form-textarea" rows="5"
-                  placeholder="寫下備忘內容…"></textarea>
-      </div>
-      <div class="form-group">
-        <label class="checkbox-label">
-          <input type="checkbox" id="memo-private" />
-          設為私人（只有自己看得到）🔒
-        </label>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="closeModal('modal-add-memo')">取消</button>
-      <button class="btn-primary" onclick="submitAddMemo()">新增</button>
-    </div>
-  </div>
-
-
-  <!-- ==========================================
-       Modal：新增旅遊資訊
-  =========================================== -->
-  <div id="modal-add-info" class="modal hidden">
-    <div class="modal-header">
-      <h3>新增旅遊資訊</h3>
-      <button class="modal-close" onclick="closeModal('modal-add-info')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>標題 <span class="required">*</span></label>
-        <input type="text" id="info-title" class="form-input"
-               placeholder="例：機票訂位代碼" />
-      </div>
-      <div class="form-group">
-        <label>類別</label>
-        <select id="info-category" class="form-select">
-          <option value="flight">✈️ 航班</option>
-          <option value="hotel">🏨 飯店</option>
-          <option value="visa">📄 簽證</option>
-          <option value="insurance">🛡️ 保險</option>
-          <option value="emergency">🆘 緊急聯絡</option>
-          <option value="other">📌 其他</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>內容 <span class="required">*</span></label>
-        <textarea id="info-content" class="form-textarea" rows="4"
-                  placeholder="例：航班號 CI123、確認碼 ABCDEF…"></textarea>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="closeModal('modal-add-info')">取消</button>
-      <button class="btn-primary" onclick="submitAddInfo()">新增</button>
-    </div>
-  </div>
-
-
-  <!-- ==========================================
-       Modal：邀請成員
-  =========================================== -->
-  <div id="modal-invite" class="modal hidden">
-    <div class="modal-header">
-      <h3>👥 邀請成員</h3>
-      <button class="modal-close" onclick="closeModal('modal-invite')">✕</button>
-    </div>
-    <div class="modal-body">
-      <p class="modal-desc">
-        分享以下連結給旅伴，連結有效期 <strong>7 天</strong>，
-        最多 <strong>50 人</strong>可使用。
-      </p>
-      <div class="invite-link-box">
-        <input type="text" id="invite-link-input" class="form-input"
-               readonly placeholder="尚未產生連結" />
-        <button class="btn-secondary btn-small" onclick="copyInviteLink()">
-          複製
-        </button>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="closeModal('modal-invite')">關閉</button>
-      <button class="btn-primary" onclick="generateInviteLink()">
-        產生新連結
-      </button>
-    </div>
-  </div>
-
-
-  <!-- ==========================================
-       Toast 通知
-  =========================================== -->
-  <div id="toast" class="toast hidden"></div>
-
-
-  <script type="module" src="js/trip.js"></script>
 </body>
 </html>
