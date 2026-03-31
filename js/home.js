@@ -1,36 +1,93 @@
 // js/home.js
-import { supabase, waitForSession, onAuthStateChange } from './auth.js'
+import {
+  supabase,
+  waitForSession,
+  onAuthStateChange,
+  sendMagicLink,
+  signOut,
+  getUserProfile,
+} from './auth.js'
 
-// ── DOM 元素 ──────────────────────────────────────
-const pageLoading   = document.getElementById('page-loading')
-const authScreen    = document.getElementById('auth-screen')
-const homeScreen    = document.getElementById('home-screen')
+// ═══════════════════════════════════════════════════
+// DOM 元素
+// ═══════════════════════════════════════════════════
+const $ = id => document.getElementById(id)
 
-const emailInput    = document.getElementById('auth-email')
-const sendBtn       = document.getElementById('send-magic-link-btn')
-const authMessage   = document.getElementById('auth-message')
-const magicForm     = document.getElementById('magic-link-form')
-const magicSent     = document.getElementById('magic-link-sent')
-const sentEmailDisp = document.getElementById('sent-email-display')
-const resendBtn     = document.getElementById('resend-btn')
+const pageLoading   = $('page-loading')
+const authScreen    = $('auth-screen')
+const homeScreen    = $('home-screen')
 
-const adminBtn      = document.getElementById('admin-btn')
-const logoutBtn     = document.getElementById('logout-btn')
-const userEmailDisp = document.getElementById('user-email-display')
+const emailInput    = $('auth-email')
+const sendBtn       = $('send-magic-link-btn')
+const authMessage   = $('auth-message')
+const magicForm     = $('magic-link-form')
+const magicSent     = $('magic-link-sent')
+const sentEmailDisp = $('sent-email-display')
+const resendBtn     = $('resend-btn')
 
-const tripsLoading  = document.getElementById('trips-loading')
-const tripsEmpty    = document.getElementById('trips-empty')
-const tripsList     = document.getElementById('trips-list')
+const adminBtn      = $('admin-btn')
+const logoutBtn     = $('logout-btn')
+const userEmailDisp = $('user-email-display')
 
-// ── 防止重複執行 showHome ─────────────────────────
+const tripsLoading  = $('trips-loading')
+const tripsEmpty    = $('trips-empty')
+const tripsList     = $('trips-list')
+
+// ═══════════════════════════════════════════════════
+// 狀態
+// ═══════════════════════════════════════════════════
 let homeShown = false
+
+// ═══════════════════════════════════════════════════
+// 畫面切換輔助
+// ═══════════════════════════════════════════════════
+
+/** 隱藏載入遮罩 */
+function hideLoading() {
+  pageLoading?.classList.add('hidden')
+}
+
+/** 顯示登入畫面 */
+function showAuth() {
+  hideLoading()
+  authScreen?.classList.remove('hidden')
+  homeScreen?.classList.add('hidden')
+}
+
+/** 顯示主頁畫面 */
+async function showHome(user) {
+  if (homeShown) return   // ← 防止重複執行
+  homeShown = true
+
+  hideLoading()
+  authScreen?.classList.add('hidden')
+  homeScreen?.classList.remove('hidden')
+
+  // 顯示用戶 Email
+  if (userEmailDisp) userEmailDisp.textContent = user.email ?? ''
+
+  // 預設隱藏管理按鈕
+  adminBtn?.classList.add('hidden')
+
+  // 取得 Profile
+  const profile = await getUserProfile(user.id)
+
+  if (profile?.is_platform_admin) {
+    adminBtn?.classList.remove('hidden')
+  }
+
+  await loadTrips(user.id, profile?.is_platform_admin ?? false)
+}
 
 // ═══════════════════════════════════════════════════
 // 初始化
 // ═══════════════════════════════════════════════════
 async function init() {
-  // waitForSession 處理 Magic Link 回調 & localStorage session
+  console.log('[home] init() 開始')
+
+  // waitForSession 處理 Magic Link 回調與 localStorage session
   const session = await waitForSession()
+  console.log('[home] waitForSession 完成，user:', session?.user?.email ?? '無')
 
   if (session?.user) {
     await showHome(session.user)
@@ -39,13 +96,11 @@ async function init() {
   }
 
   // 監聽後續狀態變化
-  onAuthStateChange(async (event, session) => {
-    console.log('[home] Auth event:', event, session?.user?.email ?? '—')
+  onAuthStateChange(async (event, newSession) => {
+    console.log('[home] Auth event:', event, newSession?.user?.email ?? '—')
 
-    if (event === 'SIGNED_IN' && session?.user) {
-      if (!homeShown) {
-        await showHome(session.user)
-      }
+    if (event === 'SIGNED_IN' && newSession?.user) {
+      await showHome(newSession.user)
     } else if (event === 'SIGNED_OUT') {
       homeShown = false
       showAuth()
@@ -54,59 +109,20 @@ async function init() {
 }
 
 // ═══════════════════════════════════════════════════
-// 畫面切換
-// ═══════════════════════════════════════════════════
-function showAuth() {
-  pageLoading.classList.add('hidden')     // ← 加 class
-  authScreen.style.display  = 'flex'
-  homeScreen.style.display  = 'none'
-}
-
-async function showHome(user) {
-  homeShown = true
-
-  pageLoading.classList.add('hidden')     // ← 加 class
-  authScreen.style.display  = 'none'
-  homeScreen.style.display  = 'block'
-
-  if (userEmailDisp) {
-    userEmailDisp.textContent = user.email ?? ''
-  }
-
-  adminBtn.style.display = 'none'
-
-  // ── 取得 Profile ──────────────────────────────
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('id, display_name, avatar_url, is_platform_admin')
-    .eq('id', user.id)
-    .single()
-
-  if (profileError && profileError.code !== 'PGRST116') {
-    console.error('[home] 取得 Profile 失敗:', profileError.message)
-  }
-
-  if (profile?.is_platform_admin) {
-    adminBtn.style.display = 'flex'
-  }
-
-  await loadTrips(user.id, profile?.is_platform_admin ?? false)
-}
-
-// ═══════════════════════════════════════════════════
 // 載入旅行列表
 // ═══════════════════════════════════════════════════
 async function loadTrips(userId, isAdmin) {
-  tripsLoading.style.display = 'flex'
-  tripsEmpty.style.display   = 'none'
-  tripsList.style.display    = 'none'
-  tripsList.innerHTML        = ''
+  // 顯示載入狀態
+  tripsLoading?.classList.remove('hidden')
+  tripsEmpty?.classList.add('hidden')
+  tripsList?.classList.add('hidden')
+  if (tripsList) tripsList.innerHTML = ''
 
   try {
     let trips = []
 
     if (isAdmin) {
-      // 管理員：顯示所有旅行（不限 created_by）
+      // 管理員：顯示所有旅行
       const { data, error } = await supabase
         .from('trips')
         .select('*')
@@ -132,24 +148,24 @@ async function loadTrips(userId, isAdmin) {
       if (error) throw error
 
       trips = (data ?? [])
-        .map(m => m.trips)
+        .map(row => row.trips)
         .filter(Boolean)
         .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
     }
 
-    tripsLoading.style.display = 'none'
+    tripsLoading?.classList.add('hidden')
 
     if (trips.length === 0) {
-      tripsEmpty.style.display = 'flex'
+      tripsEmpty?.classList.remove('hidden')
     } else {
-      tripsList.style.display = 'grid'
+      tripsList?.classList.remove('hidden')
       renderTrips(trips)
     }
 
   } catch (err) {
     console.error('[home] 載入旅行失敗:', err.message ?? err)
-    tripsLoading.style.display = 'none'
-    tripsEmpty.style.display   = 'flex'
+    tripsLoading?.classList.add('hidden')
+    tripsEmpty?.classList.remove('hidden')
   }
 }
 
@@ -157,12 +173,13 @@ async function loadTrips(userId, isAdmin) {
 // 渲染旅行卡片
 // ═══════════════════════════════════════════════════
 function renderTrips(trips) {
+  if (!tripsList) return
   tripsList.innerHTML = ''
   trips.forEach(trip => tripsList.appendChild(createTripCard(trip)))
 }
 
 function createTripCard(trip) {
-  const card = document.createElement('div')
+  const card = document.createElement('article')
   card.className = 'trip-card'
   card.setAttribute('role', 'button')
   card.setAttribute('tabindex', '0')
@@ -173,7 +190,7 @@ function createTripCard(trip) {
 
   card.innerHTML = `
     <div class="trip-card-header">
-      <span class="trip-card-emoji">${trip.cover_emoji || '✈️'}</span>
+      <span class="trip-card-emoji" aria-hidden="true">${trip.cover_emoji || '✈️'}</span>
       <span class="trip-card-countdown ${countdownClass}">${countdownText}</span>
     </div>
     <div class="trip-card-body">
@@ -186,6 +203,7 @@ function createTripCard(trip) {
   `
 
   const navigate = () => { location.href = `trip.html?id=${trip.id}` }
+
   card.addEventListener('click', navigate)
   card.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -198,14 +216,27 @@ function createTripCard(trip) {
 }
 
 // ═══════════════════════════════════════════════════
-// 日期工具函數
+// 日期工具
 // ═══════════════════════════════════════════════════
+function todayMidnight() {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+function dateMidnight(str) {
+  const d = new Date(str)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
 function getCountdown(startDate, endDate) {
-  const today     = new Date(); today.setHours(0, 0, 0, 0)
-  const start     = new Date(startDate); start.setHours(0, 0, 0, 0)
-  const end       = new Date(endDate);   end.setHours(0, 0, 0, 0)
-  const diffStart = Math.ceil((start - today) / 86400000)
-  const diffEnd   = Math.ceil((end   - today) / 86400000)
+  if (!startDate) return '日期未定'
+  const today     = todayMidnight()
+  const start     = dateMidnight(startDate)
+  const end       = endDate ? dateMidnight(endDate) : start
+  const diffStart = Math.ceil((start - today) / 86_400_000)
+  const diffEnd   = Math.ceil((end   - today) / 86_400_000)
 
   if (diffStart > 0)  return `還有 ${diffStart} 天`
   if (diffEnd   >= 0) return '旅行中 🎉'
@@ -213,11 +244,12 @@ function getCountdown(startDate, endDate) {
 }
 
 function getCountdownClass(startDate, endDate) {
-  const today     = new Date(); today.setHours(0, 0, 0, 0)
-  const start     = new Date(startDate); start.setHours(0, 0, 0, 0)
-  const end       = new Date(endDate);   end.setHours(0, 0, 0, 0)
-  const diffStart = Math.ceil((start - today) / 86400000)
-  const diffEnd   = Math.ceil((end   - today) / 86400000)
+  if (!startDate) return 'countdown-future'
+  const today     = todayMidnight()
+  const start     = dateMidnight(startDate)
+  const end       = endDate ? dateMidnight(endDate) : start
+  const diffStart = Math.ceil((start - today) / 86_400_000)
+  const diffEnd   = Math.ceil((end   - today) / 86_400_000)
 
   if (diffStart > 30) return 'countdown-future'
   if (diffStart > 0)  return 'countdown-soon'
@@ -230,8 +262,9 @@ function formatDateRange(startDate, endDate) {
   const start = new Date(startDate)
   const end   = endDate ? new Date(endDate) : null
   const fmt   = d => `${d.getMonth() + 1}/${d.getDate()}`
-  const year  = start.getFullYear()
-  return end ? `${year} ${fmt(start)} – ${fmt(end)}` : `${year} ${fmt(start)}`
+  return end
+    ? `${start.getFullYear()} ${fmt(start)} – ${fmt(end)}`
+    : `${start.getFullYear()} ${fmt(start)}`
 }
 
 // ═══════════════════════════════════════════════════
@@ -239,33 +272,34 @@ function formatDateRange(startDate, endDate) {
 // ═══════════════════════════════════════════════════
 function escapeHtml(str) {
   if (!str) return ''
-  return str
-    .replace(/&/g,  '&amp;')
-    .replace(/</g,  '&lt;')
-    .replace(/>/g,  '&gt;')
-    .replace(/"/g,  '&quot;')
-    .replace(/'/g,  '&#39;')
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
 
 function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())
 }
 
+/**
+ * 顯示登入表單的錯誤 / 成功訊息
+ * @param {string} msg
+ * @param {'info'|'success'|'error'} type
+ */
 function showAuthMessage(msg, type = 'info') {
   if (!authMessage) return
-  authMessage.textContent   = msg
-  authMessage.className     = `auth-message auth-message-${type}`
-  authMessage.style.display = 'block'
-}
+  authMessage.textContent = msg
+  // 先移除所有狀態 class，再加入對應的
+  authMessage.className = `auth-message auth-message-${type}`
 
-// ── 計算 Magic Link redirectTo ────────────────────
-function getMagicLinkRedirect() {
-  const origin = location.origin
-  if (origin.includes('github.io')) {
-    const repo = location.pathname.split('/').filter(Boolean)[0] ?? ''
-    return `${origin}/${repo}/index.html`
+  if (msg) {
+    authMessage.classList.remove('hidden')
+  } else {
+    authMessage.classList.add('hidden')
   }
-  return `${origin}/index.html`
 }
 
 // ═══════════════════════════════════════════════════
@@ -274,7 +308,8 @@ function getMagicLinkRedirect() {
 
 // 發送 Magic Link
 sendBtn?.addEventListener('click', async () => {
-  const email = emailInput?.value?.trim()
+  const email = emailInput?.value?.trim() ?? ''
+
   if (!email)               return showAuthMessage('請輸入電子郵件', 'error')
   if (!isValidEmail(email)) return showAuthMessage('請輸入有效的電子郵件格式', 'error')
 
@@ -282,21 +317,21 @@ sendBtn?.addEventListener('click', async () => {
   sendBtn.textContent = '發送中⋯'
   showAuthMessage('', 'info')
 
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: getMagicLinkRedirect() }
-  })
+  // 使用 auth.js 封裝的 sendMagicLink（內建 redirectTo 計算）
+  const { error } = await sendMagicLink(email)
 
   sendBtn.disabled    = false
   sendBtn.textContent = '發送登入連結'
 
   if (error) {
     showAuthMessage('發送失敗：' + error.message, 'error')
-  } else {
-    if (sentEmailDisp) sentEmailDisp.textContent = email
-    magicForm.style.display = 'none'
-    magicSent.style.display = 'block'
+    return
   }
+
+  // 切換到「已發送」狀態
+  if (sentEmailDisp) sentEmailDisp.textContent = email
+  magicForm?.classList.add('hidden')
+  magicSent?.classList.remove('hidden')
 })
 
 // Enter 鍵觸發
@@ -304,10 +339,10 @@ emailInput?.addEventListener('keydown', e => {
   if (e.key === 'Enter') sendBtn?.click()
 })
 
-// 重新發送
+// 重新發送（回到輸入表單）
 resendBtn?.addEventListener('click', () => {
-  magicSent.style.display = 'none'
-  magicForm.style.display = 'block'
+  magicSent?.classList.add('hidden')
+  magicForm?.classList.remove('hidden')
   if (emailInput) {
     emailInput.value = ''
     emailInput.focus()
@@ -319,11 +354,10 @@ adminBtn?.addEventListener('click', () => {
   location.href = 'admin.html'
 })
 
-// 登出
+// 登出（使用 auth.js 封裝，會自動跳轉）
 logoutBtn?.addEventListener('click', async () => {
   if (!confirm('確定要登出嗎？')) return
-  await supabase.auth.signOut()
-  // 觸發 onAuthStateChange → SIGNED_OUT → showAuth()
+  await signOut()
 })
 
 // ═══════════════════════════════════════════════════
