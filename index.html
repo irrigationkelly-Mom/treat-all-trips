@@ -9,17 +9,26 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  />
   <link rel="stylesheet" href="css/main.css" />
-<!-- ========== 全頁載入遮罩 ========== -->
-<div id="page-loading" class="page-loading" style="display:flex;">
 </head>
 <body>
+
+  <!-- ========== 全頁載入遮罩（只放一個，放在 body 最前面）========== -->
+  <div id="page-loading" class="page-loading">
+    <div class="page-loading-inner">
+      <div class="loading-spinner large"></div>
+      <p>載入中⋯</p>
+    </div>
+  </div>
 
   <!-- ========== 登入畫面 ========== -->
   <div id="auth-screen" class="screen" style="display:none;">
     <div class="auth-container">
-      
+
       <div class="auth-logo">
         <div class="auth-logo-icon">✈️</div>
         <h1 class="auth-title">Treat All Trips</h1>
@@ -30,13 +39,13 @@
       <div id="magic-link-form" class="auth-card">
         <h2 class="auth-card-title">登入 / 註冊</h2>
         <p class="auth-card-desc">輸入 Email，我們將發送登入連結</p>
-        
+
         <div class="form-group">
           <label class="form-label">電子郵件</label>
-          <input 
-            type="email" 
-            id="auth-email" 
-            class="form-input" 
+          <input
+            type="email"
+            id="auth-email"
+            class="form-input"
             placeholder="your@email.com"
             autocomplete="email"
           />
@@ -68,7 +77,7 @@
 
   <!-- ========== 首頁（旅行列表）========== -->
   <div id="home-screen" class="screen" style="display:none;">
-    
+
     <!-- Header -->
     <header class="app-header">
       <div class="app-header-inner">
@@ -109,15 +118,8 @@
 
   </div>
 
-  <!-- ========== 全頁載入遮罩 ========== -->
-  <div id="page-loading" class="page-loading">
-    <div class="page-loading-inner">
-      <div class="loading-spinner large"></div>
-      <p>載入中⋯</p>
-    </div>
-  </div>
-
   <!-- 只載入一個 module 入口 -->
   <script type="module" src="js/home.js"></script>
+
 </body>
 </html>
