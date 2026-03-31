@@ -1,12 +1,45 @@
-// js/home.js
-import {
-  supabase,
-  waitForSession,
-  onAuthStateChange,
-  sendMagicLink,
-  signOut,
-  getUserProfile,
-} from './auth.js'
+// js/home.js — import getMagicLinkRedirect
+import { 
+  supabase, 
+  getBaseUrl,
+  getMagicLinkRedirect,  // ← add this
+  sendMagicLink, 
+  waitForSession, 
+  getAuthContext, 
+  signOut 
+} from './auth.js';
+
+// ── Magic Link 發送處理 ────────────────────────────────────────────────────────
+async function handleSendMagicLink() {
+  const emailInput = document.getElementById('auth-email');
+  const email = emailInput?.value?.trim() ?? '';
+  
+  if (!email) {
+    showAuthMessage('請輸入電子郵件地址', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('send-magic-link-btn');
+  setButtonLoading(btn, true, '發送中⋯');
+
+  // ✅ Use getMagicLinkRedirect() — matches whitelisted URL exactly
+  const { error } = await sendMagicLink(email, getMagicLinkRedirect());
+
+  setButtonLoading(btn, false, '發送登入連結');
+
+  if (error) {
+    showAuthMessage(`發送失敗：${error.message}`, 'error');
+    return;
+  }
+
+  // Show "sent" state
+  const sentEmailDisplay = document.getElementById('sent-email-display');
+  if (sentEmailDisplay) sentEmailDisplay.textContent = email;
+  
+  document.getElementById('magic-link-form')?.classList.add('hidden');
+  document.getElementById('magic-link-sent')?.classList.remove('hidden');
+}
+
 
 // ═══════════════════════════════════════════════════
 // DOM 元素
