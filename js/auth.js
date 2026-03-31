@@ -21,83 +21,61 @@ function emitAuthError(context, message) {
   );
 }
 
+// js/auth.js — replace getBaseUrl() and sendMagicLink()
+
 // ── 輔助：取得正確的 Base URL ──────────────────────────────────────────────────
 export function getBaseUrl() {
   const { origin, pathname } = location;
+  
+  // GitHub Pages: origin/repoName
   if (origin.includes('github.io')) {
-    const repoName = pathname.split('/').filter(Boolean)[0];
+    const parts = pathname.split('/').filter(Boolean);
+    // parts[0] = repo name (treat-all-trips)
+    const repoName = parts[0] ?? '';
     return repoName ? `${origin}/${repoName}` : origin;
   }
+  
+  // Local dev: just origin
   return origin;
 }
 
-// ── Email 格式驗證 ────────────────────────────────────────────────────────────
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim());
-}
-
-// ── 取得目前登入用戶 ──────────────────────────────────────────────────────────
-export async function getCurrentUser() {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error) {
-    if (!error.message.includes('session')) {
-      emitAuthError('getCurrentUser', error.message);
-    }
-    return null;
-  }
-  return user;
-}
-
-// ── 取得用戶 Profile ──────────────────────────────────────────────────────────
-export async function getUserProfile(userId) {
-  if (!userId) {
-    console.warn('[auth] getUserProfile: userId is required');
-    return null;
-  }
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      console.warn('[auth] No profile found for userId:', userId);
-    } else {
-      emitAuthError('getUserProfile', error.message);
-    }
-    return null;
-  }
-  return data;
-}
-
-// ── 取得完整用戶資訊 ──────────────────────────────────────────────────────────
-export async function getAuthContext() {
-  const user = await getCurrentUser();
-  if (!user) return { user: null, profile: null, isAdmin: false };
-  const profile = await getUserProfile(user.id);
-  const isAdmin = profile?.is_platform_admin === true;
-  return { user, profile, isAdmin };
+// ── 取得 Magic Link 的重定向 URL ─────────────────────────────────────────────
+export function getMagicLinkRedirect() {
+  const base = getBaseUrl();
+  // Must exactly match one of the whitelisted URLs in Supabase Dashboard
+  return `${base}/index.html`;
 }
 
 // ── 發送 Magic Link ───────────────────────────────────────────────────────────
 export async function sendMagicLink(email, redirectTo) {
   const trimmedEmail = String(email || '').trim();
+  
   if (!isValidEmail(trimmedEmail)) {
     const message = '請輸入有效的電子郵件地址';
     emitAuthError('sendMagicLink', message);
     return { error: new Error(message) };
   }
 
-  const defaultRedirect = `${getBaseUrl()}/index.html`;
+  // ✅ Always use the canonical redirect URL
+  const finalRedirect = redirectTo || getMagicLinkRedirect();
+  
+  console.log('[auth] sendMagicLink → redirectTo:', finalRedirect);
+
   const { error } = await supabase.auth.signInWithOtp({
     email: trimmedEmail,
-    options: { emailRedirectTo: redirectTo || defaultRedirect },
+    options: {
+      emailRedirectTo: finalRedirect,
+    },
   });
 
-  if (error) emitAuthError('sendMagicLink', error.message);
+  if (error) {
+    emitAuthError('sendMagicLink', error.message);
+    console.error('[auth] OTP error detail:', error);
+  }
+  
   return { error };
 }
+
 
 // ── 登出 ──────────────────────────────────────────────────────────────────────
 export async function signOut() {
