@@ -57,7 +57,7 @@ async function init() {
 // 畫面切換
 // ═══════════════════════════════════════════════════
 function showAuth() {
-  pageLoading.style.display = 'none'
+  pageLoading.classList.add('hidden')     // ← 加 class
   authScreen.style.display  = 'flex'
   homeScreen.style.display  = 'none'
 }
@@ -65,7 +65,7 @@ function showAuth() {
 async function showHome(user) {
   homeShown = true
 
-  pageLoading.style.display = 'none'
+  pageLoading.classList.add('hidden')     // ← 加 class
   authScreen.style.display  = 'none'
   homeScreen.style.display  = 'block'
 
