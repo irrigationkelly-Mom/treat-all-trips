@@ -1,60 +1,85 @@
 // js/admin.js
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { supabase, getBaseUrl, requireAdmin, getUserProfile } from './auth.js';
 
-// ── 初始化 ──────────────────────────────────────────────────────────────────
-const SUPABASE_URL = 'https://bgmcqkrxifxxcevbvzwf.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnbWNxa3J4aWZ4eGNldmJ2endmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk4MTIzMjgsImV4cCI6MjA2NTM4ODMyOH0.hv4wRFEMaGPBLTfbxGKqaKxhMjWBSMlHOdvNGfixqEk';
+// ── 常數 ──────────────────────────────────────────────────────────────────────
 const PLATFORM_ADMIN_ID = 'e8f65f02-5726-4b52-baca-ba0359efd1eb';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const PERMISSION_FIELDS = [
+  'can_view_itinerary',
+  'can_edit_itinerary',
+  'can_view_expense',
+  'can_edit_expense',
+  'can_view_shopping',
+  'can_edit_shopping',
+  'can_view_info',
+  'can_edit_info',
+  'can_view_tools',
+  'can_edit_tools',
+  'can_use_memo',
+  'can_use_packing',
+  'can_use_private_expense',
+];
 
-// ── 狀態 ────────────────────────────────────────────────────────────────────
-let currentUser = null;
-let currentTripId = null;   // 目前正在操作哪個 trip（邀請/成員）
+// ── 狀態 ──────────────────────────────────────────────────────────────────────
+let currentUser       = null;
+let currentTripId     = null;
 let selectedCoverFile = null;
+let editingTripId     = null; // 目前編輯的 trip（null = 新建模式）
 
-// ── DOM 元素 ─────────────────────────────────────────────────────────────────
-const logoutBtn          = document.getElementById('logoutBtn');
-const createTripForm     = document.getElementById('createTripForm');
-const createTripBtn      = document.getElementById('createTripBtn');
-const createTripMessage  = document.getElementById('createTripMessage');
-const tripsList          = document.getElementById('tripsList');
+// ── DOM 快取 ──────────────────────────────────────────────────────────────────
+const $  = id => document.getElementById(id);
+const el = {
+  logoutBtn:               $('logoutBtn'),
+  createTripForm:          $('createTripForm'),
+  createTripBtn:           $('createTripBtn'),
+  createTripMessage:       $('createTripMessage'),
+  tripsList:               $('tripsList'),
+  formTitle:               $('formTitle'),          // h2 inside form panel
 
-// 封面上傳
-const coverUploadArea      = document.getElementById('coverUploadArea');
-const coverImageInput      = document.getElementById('coverImageInput');
-const coverPreview         = document.getElementById('coverPreview');
-const coverUploadPlaceholder = document.getElementById('coverUploadPlaceholder');
-const removeCoverBtn       = document.getElementById('removeCoverBtn');
+  // Cover image
+  coverUploadArea:         $('coverUploadArea'),
+  coverImageInput:         $('coverImageInput'),
+  coverPreview:            $('coverPreview'),
+  coverUploadPlaceholder:  $('coverUploadPlaceholder'),
+  removeCoverBtn:          $('removeCoverBtn'),
 
-// 邀請 Modal
-const inviteModal          = document.getElementById('inviteModal');
-const closeModalBtn        = document.getElementById('closeModal');
-const generateInviteBtn    = document.getElementById('generateInviteBtn');
-const inviteLinkResult     = document.getElementById('inviteLinkResult');
-const inviteLinkText       = document.getElementById('inviteLinkText');
-const copyInviteLink       = document.getElementById('copyInviteLink');
+  // Invite modal
+  inviteModal:             $('inviteModal'),
+  closeModalBtn:           $('closeModal'),
+  generateInviteBtn:       $('generateInviteBtn'),
+  inviteLinkResult:        $('inviteLinkResult'),
+  inviteLinkText:          $('inviteLinkText'),
+  copyInviteLink:          $('copyInviteLink'),
 
-// 成員 Modal
-const membersModal         = document.getElementById('membersModal');
-const closeMembersModalBtn = document.getElementById('closeMembersModal');
-const membersList          = document.getElementById('membersList');
+  // Members modal
+  membersModal:            $('membersModal'),
+  closeMembersModalBtn:    $('closeMembersModal'),
+  membersList:             $('membersList'),
+
+  // Edit trip modal
+  editTripModal:           $('editTripModal'),
+  closeEditModalBtn:       $('closeEditModal'),
+  editTripForm:            $('editTripForm'),
+  editTripMessage:         $('editTripMessage'),
+  saveTripBtn:             $('saveTripBtn'),
+};
 
 // ── 工具函式 ──────────────────────────────────────────────────────────────────
-function showMessage(el, text, type = 'info') {
-  el.textContent = text;
-  el.className = `message message-${type}`;
-  el.classList.remove('hidden');
+function showMsg(elRef, text, type = 'info') {
+  elRef.textContent = text;
+  elRef.className   = `message message-${type}`;
+  elRef.classList.remove('hidden');
 }
 
-function hideMessage(el) {
-  el.classList.add('hidden');
+function hideMsg(elRef) {
+  elRef.classList.add('hidden');
 }
 
 function formatDate(dateStr) {
   if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
+  return new Date(dateStr).toLocaleDateString('zh-TW', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
 }
 
 function generateToken() {
@@ -63,409 +88,570 @@ function generateToken() {
   return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// ── 封面圖片 ──────────────────────────────────────────────────────────────────
-coverUploadArea.addEventListener('click', () => coverImageInput.click());
+function isValidImageType(file) {
+  return ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type);
+}
 
-coverImageInput.addEventListener('change', (e) => {
-  const file = e.target.files[0];
+// ── 封面圖片處理 ──────────────────────────────────────────────────────────────
+function initCoverUpload() {
+  el.coverUploadArea.addEventListener('click', () => el.coverImageInput.click());
+
+  el.coverImageInput.addEventListener('change', (e) => {
+    handleCoverFile(e.target.files[0]);
+  });
+
+  el.removeCoverBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    clearCoverPreview();
+  });
+
+  el.coverUploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    el.coverUploadArea.classList.add('drag-over');
+  });
+
+  el.coverUploadArea.addEventListener('dragleave', (e) => {
+    e.stopPropagation();
+    el.coverUploadArea.classList.remove('drag-over');
+  });
+
+  el.coverUploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    el.coverUploadArea.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) handleCoverFile(file);
+  });
+}
+
+function handleCoverFile(file) {
   if (!file) return;
 
-  // 大小限制 5MB
+  if (!isValidImageType(file)) {
+    showMsg(el.createTripMessage, '僅支援 JPG、PNG、WebP、GIF 格式', 'error');
+    return;
+  }
   if (file.size > 5 * 1024 * 1024) {
-    alert('圖片大小不能超過 5MB');
+    showMsg(el.createTripMessage, '圖片大小不能超過 5MB', 'error');
     return;
   }
 
   selectedCoverFile = file;
   const url = URL.createObjectURL(file);
-  coverPreview.src = url;
-  coverPreview.classList.remove('hidden');
-  coverUploadPlaceholder.classList.add('hidden');
-  removeCoverBtn.classList.remove('hidden');
-});
+  el.coverPreview.src = url;
+  el.coverPreview.classList.remove('hidden');
+  el.coverUploadPlaceholder.classList.add('hidden');
+  el.removeCoverBtn.classList.remove('hidden');
+}
 
-removeCoverBtn.addEventListener('click', () => {
-  selectedCoverFile = null;
-  coverImageInput.value = '';
-  coverPreview.src = '';
-  coverPreview.classList.add('hidden');
-  coverUploadPlaceholder.classList.remove('hidden');
-  removeCoverBtn.classList.add('hidden');
-});
-
-// 拖拉上傳
-coverUploadArea.addEventListener('dragover', (e) => {
-  e.preventDefault();
-  coverUploadArea.classList.add('drag-over');
-});
-coverUploadArea.addEventListener('dragleave', () => {
-  coverUploadArea.classList.remove('drag-over');
-});
-coverUploadArea.addEventListener('drop', (e) => {
-  e.preventDefault();
-  coverUploadArea.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith('image/')) {
-    coverImageInput.files = e.dataTransfer.files;
-    coverImageInput.dispatchEvent(new Event('change'));
-  }
-});
+function clearCoverPreview() {
+  selectedCoverFile         = null;
+  el.coverImageInput.value  = '';
+  el.coverPreview.src       = '';
+  el.coverPreview.classList.add('hidden');
+  el.coverUploadPlaceholder.classList.remove('hidden');
+  el.removeCoverBtn.classList.add('hidden');
+}
 
 async function uploadCoverImage(tripId, file) {
-  const ext = file.name.split('.').pop();
+  const ext  = file.name.split('.').pop().toLowerCase();
   const path = `${tripId}/cover.${ext}`;
 
-  const { error } = await supabase.storage
+  const { error: uploadError } = await supabase.storage
     .from('trip-covers')
-    .upload(path, file, { upsert: true });
+    .upload(path, file, { upsert: true, contentType: file.type });
 
-  if (error) throw error;
+  if (uploadError) throw uploadError;
 
   const { data } = supabase.storage
     .from('trip-covers')
     .getPublicUrl(path);
 
-  return data.publicUrl;
+  // Cache-bust so updated cover shows immediately
+  return `${data.publicUrl}?t=${Date.now()}`;
 }
 
-// ── 認證檢查 ──────────────────────────────────────────────────────────────────
-async function checkAuth() {
-  const { data: { session } } = await supabase.auth.getSession();
+// ── 認證 ──────────────────────────────────────────────────────────────────────
+async function init() {
+  // requireAdmin redirects automatically if not admin
+  const auth = await requireAdmin('/index.html');
+  if (!auth) return;
 
-  if (!session) {
-    window.location.href = 'index.html';
-    return;
-  }
-
-  currentUser = session.user;
-
-  // 只有平台管理員能進這頁
-  if (currentUser.id !== PLATFORM_ADMIN_ID) {
-    alert('無管理員權限');
-    window.location.href = 'index.html';
-    return;
-  }
-
+  currentUser = auth.session.user;
   await loadTrips();
 }
 
-// ── 登出 ───────────────────────────────────────────────────────────────────────
-logoutBtn.addEventListener('click', async () => {
+// ── 登出 ──────────────────────────────────────────────────────────────────────
+el.logoutBtn.addEventListener('click', async () => {
   await supabase.auth.signOut();
-  window.location.href = 'index.html';
+  location.href = `${getBaseUrl()}/index.html`;
 });
 
-// ── 建立旅行 ───────────────────────────────────────────────────────────────────
-createTripForm.addEventListener('submit', async (e) => {
+// ── 建立 / 更新旅行 ───────────────────────────────────────────────────────────
+el.createTripForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  hideMessage(createTripMessage);
+  hideMsg(el.createTripMessage);
 
-  const name = document.getElementById('tripName').value.trim();
+  const name = $('tripName').value.trim();
   if (!name) {
-    showMessage(createTripMessage, '請輸入旅行名稱', 'error');
+    showMsg(el.createTripMessage, '請輸入旅行名稱', 'error');
     return;
   }
 
-  createTripBtn.disabled = true;
-  createTripBtn.textContent = '建立中...';
+  el.createTripBtn.disabled     = true;
+  el.createTripBtn.textContent  = editingTripId ? '儲存中...' : '建立中...';
+
+  const tripData = {
+    name,
+    emoji:           $('tripEmoji').value.trim()       || '✈️',
+    destination:     $('tripDestination').value.trim() || null,
+    start_date:      $('tripStartDate').value          || null,
+    end_date:        $('tripEndDate').value            || null,
+    base_currency:   $('tripCurrency').value,
+    description:     $('tripDescription').value.trim() || null,
+  };
 
   try {
-    // 1. 建立旅行記錄（先不含封面 URL）
-    const tripData = {
-      name,
-      emoji:         document.getElementById('tripEmoji').value.trim() || '✈️',
-      destination:   document.getElementById('tripDestination').value.trim() || null,
-      start_date:    document.getElementById('tripStartDate').value || null,
-      end_date:      document.getElementById('tripEndDate').value || null,
-      base_currency: document.getElementById('tripCurrency').value,
-      important_notes: document.getElementById('tripDescription').value.trim() || null,
-      created_by:    currentUser.id,
-      status:        'upcoming',
-    };
+    if (editingTripId) {
+      // ── 更新旅行 ──────────────────────────────────────────
+      const { error } = await supabase
+        .from('trips')
+        .update(tripData)
+        .eq('id', editingTripId);
 
-    const { data: trip, error: tripError } = await supabase
-      .from('trips')
-      .insert(tripData)
-      .select()
-      .single();
+      if (error) throw error;
 
-    if (tripError) throw tripError;
-
-    // 2. 上傳封面圖片（如果有）
-    if (selectedCoverFile) {
-      try {
-        const coverUrl = await uploadCoverImage(trip.id, selectedCoverFile);
-        await supabase
-          .from('trips')
-          .update({ cover_image_url: coverUrl })
-          .eq('id', trip.id);
-        trip.cover_image_url = coverUrl;
-      } catch (imgErr) {
-        console.warn('封面上傳失敗，但旅行已建立：', imgErr.message);
+      if (selectedCoverFile) {
+        try {
+          const url = await uploadCoverImage(editingTripId, selectedCoverFile);
+          await supabase.from('trips').update({ cover_image_url: url }).eq('id', editingTripId);
+        } catch (imgErr) {
+          console.warn('封面更新失敗：', imgErr.message);
+        }
       }
+
+      showMsg(el.createTripMessage, `✅ 旅行「${name}」已更新！`, 'success');
+      resetForm();
+      await loadTrips();
+
+    } else {
+      // ── 新建旅行 ──────────────────────────────────────────
+      const { data: trip, error: tripErr } = await supabase
+        .from('trips')
+        .insert({ ...tripData, created_by: currentUser.id, status: 'upcoming' })
+        .select()
+        .single();
+
+      if (tripErr) throw tripErr;
+
+      // 上傳封面
+      if (selectedCoverFile) {
+        try {
+          const url = await uploadCoverImage(trip.id, selectedCoverFile);
+          await supabase.from('trips').update({ cover_image_url: url }).eq('id', trip.id);
+        } catch (imgErr) {
+          console.warn('封面上傳失敗，旅行已建立：', imgErr.message);
+        }
+      }
+
+      // 建立者自動加入為全權限成員
+      const { error: memberErr } = await supabase
+        .from('trip_members')
+        .insert({
+          trip_id:  trip.id,
+          user_id:  currentUser.id,
+          nickname: '管理員',
+          ...Object.fromEntries(PERMISSION_FIELDS.map(p => [p, true])),
+        });
+
+      if (memberErr) throw memberErr;
+
+      showMsg(el.createTripMessage, `✅ 旅行「${name}」建立成功！`, 'success');
+      resetForm();
+      await loadTrips();
     }
 
-    // 3. 將建立者加入 trip_members（全部權限）
-    const { error: memberError } = await supabase
-      .from('trip_members')
-      .insert({
-        trip_id:                  trip.id,
-        user_id:                  currentUser.id,
-        nickname:                 '管理員',
-        can_view_itinerary:       true,
-        can_edit_itinerary:       true,
-        can_view_expense:         true,
-        can_edit_expense:         true,
-        can_view_shopping:        true,
-        can_edit_shopping:        true,
-        can_view_info:            true,
-        can_edit_info:            true,
-        can_view_tools:           true,
-        can_edit_tools:           true,
-        can_use_memo:             true,
-        can_use_packing:          true,
-        can_use_private_expense:  true,
-      });
-
-    if (memberError) throw memberError;
-
-    showMessage(createTripMessage, `✅ 旅行「${name}」建立成功！`, 'success');
-    createTripForm.reset();
-    removeCoverBtn.click(); // 清除封面預覽
-
-    await loadTrips();
-
   } catch (err) {
-    console.error(err);
-    showMessage(createTripMessage, `❌ 建立失敗：${err.message}`, 'error');
+    console.error('[admin] submit error:', err);
+    showMsg(el.createTripMessage, `❌ ${editingTripId ? '更新' : '建立'}失敗：${err.message}`, 'error');
   } finally {
-    createTripBtn.disabled = false;
-    createTripBtn.textContent = '✨ 建立旅行';
+    el.createTripBtn.disabled    = false;
+    el.createTripBtn.textContent = editingTripId ? '💾 儲存變更' : '✨ 建立旅行';
   }
 });
 
-// ── 載入旅行列表 ───────────────────────────────────────────────────────────────
-async function loadTrips() {
-  tripsList.innerHTML = '<div class="loading-placeholder">載入中...</div>';
+// 重置表單至新建模式
+function resetForm() {
+  editingTripId = null;
+  el.createTripForm.reset();
+  clearCoverPreview();
+  if (el.formTitle) el.formTitle.textContent = '✨ 建立新旅行';
+  el.createTripBtn.textContent = '✨ 建立旅行';
+  hideMsg(el.createTripMessage);
+}
 
+// ── 載入旅行列表 ──────────────────────────────────────────────────────────────
+async function loadTrips() {
+  el.tripsList.innerHTML = '<div class="loading-placeholder">載入中...</div>';
+
+  // Single query: trips + member count via aggregate
   const { data: trips, error } = await supabase
     .from('trips')
     .select(`
       id, name, emoji, destination,
       start_date, end_date, status,
-      cover_image_url, base_currency,
-      created_at
+      cover_image_url, base_currency, created_at,
+      trip_members(count)
     `)
     .eq('created_by', currentUser.id)
     .order('created_at', { ascending: false });
 
   if (error) {
-    tripsList.innerHTML = `<p class="error-text">載入失敗：${error.message}</p>`;
+    el.tripsList.innerHTML = `<p class="error-text">載入失敗：${error.message}</p>`;
     return;
   }
 
-  if (!trips || trips.length === 0) {
-    tripsList.innerHTML = '<p class="empty-text">還沒有旅行，快去建立第一個吧！</p>';
+  if (!trips?.length) {
+    el.tripsList.innerHTML = '<p class="empty-text">還沒有旅行，快去建立第一個吧！</p>';
     return;
   }
 
-  // 取得每個 trip 的成員數
-  const memberCounts = await Promise.all(
-    trips.map(t =>
-      supabase
-        .from('trip_members')
-        .select('id', { count: 'exact', head: true })
-        .eq('trip_id', t.id)
-    )
-  );
-
-  tripsList.innerHTML = trips.map((trip, i) => {
-    const count = memberCounts[i].count ?? 0;
-    const statusLabel = { upcoming: '即將出發', ongoing: '進行中', completed: '已結束' };
-    const statusClass = { upcoming: 'status-upcoming', ongoing: 'status-ongoing', completed: 'status-completed' };
-
-    const coverStyle = trip.cover_image_url
-      ? `background-image: url('${trip.cover_image_url}'); background-size: cover; background-position: center;`
-      : '';
-
-    return `
-      <div class="trip-card" data-id="${trip.id}">
-        <div class="trip-card-cover" style="${coverStyle}">
-          ${!trip.cover_image_url ? `<span class="trip-card-emoji">${trip.emoji || '✈️'}</span>` : ''}
-          <span class="trip-status-badge ${statusClass[trip.status] || ''}">${statusLabel[trip.status] || trip.status}</span>
-        </div>
-        <div class="trip-card-body">
-          <div class="trip-card-title">
-            ${trip.cover_image_url ? `<span>${trip.emoji || '✈️'}</span>` : ''}
-            <strong>${trip.name}</strong>
-          </div>
-          ${trip.destination ? `<div class="trip-card-meta">📍 ${trip.destination}</div>` : ''}
-          ${trip.start_date ? `<div class="trip-card-meta">📅 ${formatDate(trip.start_date)}${trip.end_date ? ' ~ ' + formatDate(trip.end_date) : ''}</div>` : ''}
-          <div class="trip-card-meta">👥 ${count} 位成員 ・ ${trip.base_currency}</div>
-        </div>
-        <div class="trip-card-actions">
-          <button class="btn btn-sm btn-primary" onclick="openTrip('${trip.id}')">
-            🗺️ 開啟
-          </button>
-          <button class="btn btn-sm btn-secondary" onclick="openInviteModal('${trip.id}')">
-            🔗 邀請
-          </button>
-          <button class="btn btn-sm btn-ghost" onclick="openMembersModal('${trip.id}')">
-            👥 成員
-          </button>
-        </div>
-      </div>
-    `;
-  }).join('');
+  el.tripsList.innerHTML = trips.map(renderTripCard).join('');
 }
 
-// ── 開啟旅行頁面 ───────────────────────────────────────────────────────────────
-window.openTrip = function(tripId) {
-  window.location.href = `trip.html?id=${tripId}`;
-};
+const STATUS_LABEL = { upcoming: '即將出發', ongoing: '進行中', completed: '已結束' };
+const STATUS_CLASS = { upcoming: 'status-upcoming', ongoing: 'status-ongoing', completed: 'status-completed' };
 
-// ── 邀請 Modal ─────────────────────────────────────────────────────────────────
-window.openInviteModal = function(tripId) {
-  currentTripId = tripId;
-  inviteLinkResult.classList.add('hidden');
-  document.getElementById('inviteeName').value = '';
-  document.getElementById('inviteMaxUses').value = '0';
-  inviteModal.classList.remove('hidden');
-};
+function renderTripCard(trip) {
+  // trip_members returns [{ count: N }] from the aggregate
+  const count      = trip.trip_members?.[0]?.count ?? 0;
+  const coverStyle = trip.cover_image_url
+    ? `background-image:url('${trip.cover_image_url}');background-size:cover;background-position:center;`
+    : '';
 
-closeModalBtn.addEventListener('click', () => {
-  inviteModal.classList.add('hidden');
+  return `
+    <div class="trip-card" data-id="${trip.id}">
+      <div class="trip-card-cover" style="${coverStyle}">
+        ${!trip.cover_image_url
+          ? `<span class="trip-card-emoji">${trip.emoji || '✈️'}</span>`
+          : ''}
+        <span class="trip-status-badge ${STATUS_CLASS[trip.status] || ''}">
+          ${STATUS_LABEL[trip.status] || trip.status}
+        </span>
+      </div>
+
+      <div class="trip-card-body">
+        <div class="trip-card-title">
+          ${trip.cover_image_url ? `<span>${trip.emoji || '✈️'}</span>` : ''}
+          <strong>${escapeHtml(trip.name)}</strong>
+        </div>
+        ${trip.destination
+          ? `<div class="trip-card-meta">📍 ${escapeHtml(trip.destination)}</div>`
+          : ''}
+        ${trip.start_date
+          ? `<div class="trip-card-meta">📅 ${formatDate(trip.start_date)}${trip.end_date ? ' ～ ' + formatDate(trip.end_date) : ''}</div>`
+          : ''}
+        <div class="trip-card-meta">👥 ${count} 位成員・${trip.base_currency}</div>
+      </div>
+
+      <div class="trip-card-actions">
+        <button class="btn btn-sm btn-primary"
+                data-action="open" data-id="${trip.id}">🗺️ 開啟</button>
+        <button class="btn btn-sm btn-secondary"
+                data-action="invite" data-id="${trip.id}">🔗 邀請</button>
+        <button class="btn btn-sm btn-ghost"
+                data-action="members" data-id="${trip.id}">👥 成員</button>
+        <button class="btn btn-sm btn-ghost"
+                data-action="edit" data-id="${trip.id}"
+                data-trip='${JSON.stringify(trip)}'>✏️ 編輯</button>
+        <button class="btn btn-sm btn-danger"
+                data-action="delete" data-id="${trip.id}"
+                data-name="${escapeHtml(trip.name)}">🗑️ 刪除</button>
+      </div>
+    </div>
+  `;
+}
+
+// ── 事件委派：取代 window.xxx 全域函式 ───────────────────────────────────────
+el.tripsList.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+
+  const { action, id: tripId, name: tripName } = btn.dataset;
+
+  switch (action) {
+    case 'open':
+      location.href = `${getBaseUrl()}/trip.html?id=${tripId}`;
+      break;
+
+    case 'invite':
+      openInviteModal(tripId);
+      break;
+
+    case 'members':
+      await openMembersModal(tripId);
+      break;
+
+    case 'edit': {
+      const trip = JSON.parse(btn.dataset.trip);
+      loadTripIntoForm(trip);
+      break;
+    }
+
+    case 'delete':
+      await deleteTrip(tripId, tripName);
+      break;
+  }
 });
 
-inviteModal.addEventListener('click', (e) => {
-  if (e.target === inviteModal) inviteModal.classList.add('hidden');
-});
+// XSS 防護
+function escapeHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
-generateInviteBtn.addEventListener('click', async () => {
-  if (!currentTripId) return;
+// ── 編輯旅行（載入表單）─────────────────────────────────────────────────────
+function loadTripIntoForm(trip) {
+  editingTripId = trip.id;
 
-  generateInviteBtn.disabled = true;
-  generateInviteBtn.textContent = '生成中...';
+  $('tripName').value        = trip.name        || '';
+  $('tripEmoji').value       = trip.emoji       || '✈️';
+  $('tripDestination').value = trip.destination || '';
+  $('tripStartDate').value   = trip.start_date  || '';
+  $('tripEndDate').value     = trip.end_date    || '';
+  $('tripCurrency').value    = trip.base_currency || 'TWD';
+  $('tripDescription').value = trip.description || '';
+
+  // Show existing cover if any
+  if (trip.cover_image_url) {
+    el.coverPreview.src = trip.cover_image_url;
+    el.coverPreview.classList.remove('hidden');
+    el.coverUploadPlaceholder.classList.add('hidden');
+    el.removeCoverBtn.classList.remove('hidden');
+  } else {
+    clearCoverPreview();
+  }
+
+  if (el.formTitle) el.formTitle.textContent = '✏️ 編輯旅行';
+  el.createTripBtn.textContent = '💾 儲存變更';
+
+  // Scroll form into view
+  el.createTripForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── 刪除旅行 ──────────────────────────────────────────────────────────────────
+async function deleteTrip(tripId, tripName) {
+  const confirmed = confirm(
+    `⚠️ 確定要刪除旅行「${tripName}」？\n\n此操作無法復原，相關成員與邀請連結將一併刪除。`
+  );
+  if (!confirmed) return;
+
+  // Double confirm for safety
+  const reconfirmed = confirm(`再次確認：永久刪除「${tripName}」？`);
+  if (!reconfirmed) return;
 
   try {
-    const expiryHours = parseInt(document.getElementById('inviteExpiry').value);
-    const expiresAt   = new Date(Date.now() + expiryHours * 60 * 60 * 1000).toISOString();
-    const maxUses     = parseInt(document.getElementById('inviteMaxUses').value) || 0;
-    const inviteeName = document.getElementById('inviteeName').value.trim() || null;
+    // Delete in correct order (FK constraints)
+    await supabase.from('invite_links').delete().eq('trip_id', tripId);
+    await supabase.from('trip_members').delete().eq('trip_id', tripId);
+
+    const { error } = await supabase.from('trips').delete().eq('id', tripId);
+    if (error) throw error;
+
+    await loadTrips();
+
+    // If we were editing this trip, reset the form
+    if (editingTripId === tripId) resetForm();
+
+  } catch (err) {
+    console.error('[admin] deleteTrip error:', err);
+    alert(`刪除失敗：${err.message}`);
+  }
+}
+
+// ── 邀請 Modal ────────────────────────────────────────────────────────────────
+function openInviteModal(tripId) {
+  currentTripId = tripId;
+  el.inviteLinkResult.classList.add('hidden');
+  $('inviteeName').value  = '';
+  $('inviteMaxUses').value = '0';
+  // Reset all permission checkboxes to checked by default
+  PERMISSION_FIELDS.forEach(p => {
+    const checkbox = document.getElementById(`perm_${p.replace('can_', '')}`);
+    if (checkbox) checkbox.checked = true;
+  });
+  el.inviteModal.classList.remove('hidden');
+}
+
+el.closeModalBtn.addEventListener('click', () => {
+  el.inviteModal.classList.add('hidden');
+});
+
+el.inviteModal.addEventListener('click', (e) => {
+  if (e.target === el.inviteModal) el.inviteModal.classList.add('hidden');
+});
+
+el.generateInviteBtn.addEventListener('click', async () => {
+  if (!currentTripId) return;
+
+  el.generateInviteBtn.disabled    = true;
+  el.generateInviteBtn.textContent = '生成中...';
+
+  try {
+    const expiryHours = parseInt($('inviteExpiry').value) || 24;
+    const expiresAt   = new Date(Date.now() + expiryHours * 3_600_000).toISOString();
+    const maxUses     = parseInt($('inviteMaxUses').value) || 0;
+    const inviteeName = $('inviteeName').value.trim() || null;
     const token       = generateToken();
 
-    // 收集權限
-    const permissions = {
-      can_view_itinerary:      document.getElementById('perm_itinerary').checked,
-      can_edit_itinerary:      false,
-      can_view_expense:        document.getElementById('perm_expense').checked,
-      can_edit_expense:        false,
-      can_view_shopping:       document.getElementById('perm_shopping').checked,
-      can_edit_shopping:       false,
-      can_view_info:           document.getElementById('perm_info').checked,
-      can_edit_info:           false,
-      can_view_tools:          document.getElementById('perm_tools').checked,
-      can_edit_tools:          false,
-      can_use_memo:            document.getElementById('perm_memo').checked,
-      can_use_packing:         document.getElementById('perm_packing').checked,
-      can_use_private_expense: document.getElementById('perm_private_expense').checked,
-    };
+    // Collect permissions from checkboxes
+    const permissions = {};
+    PERMISSION_FIELDS.forEach(field => {
+      // Checkbox id format: perm_view_itinerary (strips "can_")
+      const checkboxId = `perm_${field.replace('can_', '')}`;
+      const checkbox   = document.getElementById(checkboxId);
+      permissions[field] = checkbox ? checkbox.checked : false;
+    });
 
-    const { error } = await supabase
-      .from('invite_links')
-      .insert({
-        trip_id:      currentTripId,
-        token,
-        created_by:   currentUser.id,
-        expires_at:   expiresAt,
-        max_uses:     maxUses,
-        use_count:    0,
-        is_active:    true,
-        invitee_name: inviteeName,
-        permissions,
-      });
+    const { error } = await supabase.from('invite_links').insert({
+      trip_id:      currentTripId,
+      token,
+      created_by:   currentUser.id,
+      expires_at:   expiresAt,
+      max_uses:     maxUses,
+      use_count:    0,
+      is_active:    true,
+      invitee_name: inviteeName,
+      permissions,
+    });
 
     if (error) throw error;
 
-    // 顯示連結
-    const link = `${window.location.origin}/treat-all-trips/join.html?token=${token}`;
-    inviteLinkText.textContent = link;
-    inviteLinkResult.classList.remove('hidden');
+    // Use getBaseUrl() — no hardcoded path!
+    const link = `${getBaseUrl()}/join.html?token=${token}`;
+    el.inviteLinkText.textContent = link;
+    el.inviteLinkResult.classList.remove('hidden');
 
   } catch (err) {
-    console.error(err);
+    console.error('[admin] generateInvite error:', err);
     alert(`生成失敗：${err.message}`);
   } finally {
-    generateInviteBtn.disabled = false;
-    generateInviteBtn.textContent = '🔗 生成邀請連結';
+    el.generateInviteBtn.disabled    = false;
+    el.generateInviteBtn.textContent = '🔗 生成邀請連結';
   }
 });
 
-copyInviteLink.addEventListener('click', async () => {
-  const text = inviteLinkText.textContent;
+el.copyInviteLink.addEventListener('click', async () => {
+  const text = el.inviteLinkText.textContent;
   try {
     await navigator.clipboard.writeText(text);
-    copyInviteLink.textContent = '✅ 已複製！';
-    setTimeout(() => { copyInviteLink.textContent = '📋 複製連結'; }, 2000);
   } catch {
-    // fallback
-    const el = document.createElement('textarea');
-    el.value = text;
-    document.body.appendChild(el);
-    el.select();
+    // Fallback for older browsers
+    const ta = Object.assign(document.createElement('textarea'), {
+      value: text, style: 'position:fixed;opacity:0',
+    });
+    document.body.append(ta);
+    ta.select();
     document.execCommand('copy');
-    document.body.removeChild(el);
-    copyInviteLink.textContent = '✅ 已複製！';
-    setTimeout(() => { copyInviteLink.textContent = '📋 複製連結'; }, 2000);
+    ta.remove();
   }
+  el.copyInviteLink.textContent = '✅ 已複製！';
+  setTimeout(() => { el.copyInviteLink.textContent = '📋 複製連結'; }, 2000);
 });
 
-// ── 成員 Modal ─────────────────────────────────────────────────────────────────
-window.openMembersModal = async function(tripId) {
+// ── 成員 Modal ────────────────────────────────────────────────────────────────
+async function openMembersModal(tripId) {
   currentTripId = tripId;
-  membersList.innerHTML = '<div class="loading-placeholder">載入中...</div>';
-  membersModal.classList.remove('hidden');
+  el.membersList.innerHTML = '<div class="loading-placeholder">載入中...</div>';
+  el.membersModal.classList.remove('hidden');
 
   const { data, error } = await supabase
     .from('trip_members')
-    .select('id, nickname, joined_at, user_id')
+    .select(`
+      id, nickname, joined_at, user_id,
+      ${PERMISSION_FIELDS.join(',')}
+    `)
     .eq('trip_id', tripId)
     .order('joined_at', { ascending: true });
 
   if (error) {
-    membersList.innerHTML = `<p class="error-text">載入失敗：${error.message}</p>`;
+    el.membersList.innerHTML = `<p class="error-text">載入失敗：${error.message}</p>`;
     return;
   }
 
-  if (!data || data.length === 0) {
-    membersList.innerHTML = '<p class="empty-text">還沒有成員</p>';
+  if (!data?.length) {
+    el.membersList.innerHTML = '<p class="empty-text">還沒有成員</p>';
     return;
   }
 
-  membersList.innerHTML = data.map(m => {
-    const isAdmin = m.user_id === PLATFORM_ADMIN_ID;
-    const joinedDate = new Date(m.joined_at).toLocaleDateString('zh-TW');
-    return `
-      <div class="member-row">
-        <div class="member-avatar">${m.nickname ? m.nickname[0].toUpperCase() : '?'}</div>
-        <div class="member-info">
-          <div class="member-name">
-            ${m.nickname || '未命名'}
-            ${isAdmin ? '<span class="badge badge-admin">管理員</span>' : ''}
-          </div>
-          <div class="member-meta">加入於 ${joinedDate}</div>
+  el.membersList.innerHTML = data.map(renderMemberRow).join('');
+}
+
+function renderMemberRow(m) {
+  const isAdmin    = m.user_id === PLATFORM_ADMIN_ID;
+  const joinedDate = new Date(m.joined_at).toLocaleDateString('zh-TW');
+  const initial    = m.nickname?.[0]?.toUpperCase() ?? '?';
+
+  const permBadges = PERMISSION_FIELDS
+    .filter(p => m[p])
+    .map(p => `<span class="perm-badge">${p.replace('can_', '').replace(/_/g, ' ')}</span>`)
+    .join('');
+
+  return `
+    <div class="member-row" data-member-id="${m.id}">
+      <div class="member-avatar">${initial}</div>
+      <div class="member-info">
+        <div class="member-name">
+          ${escapeHtml(m.nickname || '未命名')}
+          ${isAdmin ? '<span class="badge badge-admin">管理員</span>' : ''}
         </div>
+        <div class="member-meta">加入於 ${joinedDate}</div>
+        <div class="member-perms">${permBadges}</div>
+      </div>
+      <div class="member-actions">
         ${!isAdmin ? `
-          <button class="btn btn-sm btn-danger" onclick="removeMember('${m.id}', '${tripId}')">
+          <button class="btn btn-sm btn-ghost"
+                  data-action="edit-perms"
+                  data-member='${JSON.stringify(m)}'>
+            ⚙️ 權限
+          </button>
+          <button class="btn btn-sm btn-danger"
+                  data-action="remove-member"
+                  data-member-id="${m.id}"
+                  data-trip-id="${currentTripId}">
             移除
           </button>
         ` : ''}
       </div>
-    `;
-  }).join('');
-};
+    </div>
+  `;
+}
 
-window.removeMember = async function(memberId, tripId) {
+// 成員 Modal 內的事件委派
+el.membersList.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+
+  const action = btn.dataset.action;
+
+  if (action === 'remove-member') {
+    const { memberId, tripId } = btn.dataset;
+    await removeMember(memberId, tripId);
+  }
+
+  if (action === 'edit-perms') {
+    const member = JSON.parse(btn.dataset.member);
+    openPermissionsEditor(member);
+  }
+});
+
+async function removeMember(memberId, tripId) {
   if (!confirm('確定要移除此成員？')) return;
 
   const { error } = await supabase
@@ -478,17 +664,88 @@ window.removeMember = async function(memberId, tripId) {
     return;
   }
 
-  await openMembersModal(tripId);
-  await loadTrips(); // 更新成員數
-};
+  await openMembersModal(tripId || currentTripId);
+  await loadTrips();
+}
 
-closeMembersModalBtn.addEventListener('click', () => {
-  membersModal.classList.add('hidden');
+// ── 權限編輯器（成員 Modal 內展開）─────────────────────────────────────────
+function openPermissionsEditor(member) {
+  // Find the member row
+  const row = el.membersList.querySelector(`[data-member-id="${member.id}"]`);
+  if (!row) return;
+
+  // Remove existing editor if any
+  const existing = el.membersList.querySelector('.permissions-editor');
+  if (existing) existing.remove();
+
+  const editorHtml = `
+    <div class="permissions-editor" data-for="${member.id}">
+      <div class="perms-grid">
+        ${PERMISSION_FIELDS.map(field => `
+          <label class="perm-check-label">
+            <input type="checkbox" name="${field}"
+                   ${member[field] ? 'checked' : ''}>
+            <span>${field.replace('can_', '').replace(/_/g, ' ')}</span>
+          </label>
+        `).join('')}
+      </div>
+      <div class="perms-actions">
+        <button class="btn btn-sm btn-primary" id="savePermsBtn_${member.id}">
+          💾 儲存權限
+        </button>
+        <button class="btn btn-sm btn-ghost" id="cancelPermsBtn_${member.id}">
+          取消
+        </button>
+      </div>
+    </div>
+  `;
+
+  row.insertAdjacentHTML('afterend', editorHtml);
+  const editor = el.membersList.querySelector(`[data-for="${member.id}"]`);
+
+  editor.querySelector(`#savePermsBtn_${member.id}`)
+    .addEventListener('click', () => savePermissions(member.id, editor));
+
+  editor.querySelector(`#cancelPermsBtn_${member.id}`)
+    .addEventListener('click', () => editor.remove());
+}
+
+async function savePermissions(memberId, editorEl) {
+  const updates = {};
+  PERMISSION_FIELDS.forEach(field => {
+    const checkbox = editorEl.querySelector(`[name="${field}"]`);
+    if (checkbox) updates[field] = checkbox.checked;
+  });
+
+  const { error } = await supabase
+    .from('trip_members')
+    .update(updates)
+    .eq('id', memberId);
+
+  if (error) {
+    alert(`儲存失敗：${error.message}`);
+    return;
+  }
+
+  editorEl.remove();
+  // Refresh to show updated permission badges
+  await openMembersModal(currentTripId);
+}
+
+el.closeMembersModalBtn.addEventListener('click', () => {
+  el.membersModal.classList.add('hidden');
 });
 
-membersModal.addEventListener('click', (e) => {
-  if (e.target === membersModal) membersModal.classList.add('hidden');
+el.membersModal.addEventListener('click', (e) => {
+  if (e.target === el.membersModal) el.membersModal.classList.add('hidden');
 });
 
-// ── 啟動 ───────────────────────────────────────────────────────────────────────
-checkAuth();
+// ── 取消編輯按鈕 ──────────────────────────────────────────────────────────────
+const cancelEditBtn = $('cancelEditBtn');
+if (cancelEditBtn) {
+  cancelEditBtn.addEventListener('click', resetForm);
+}
+
+// ── 啟動 ──────────────────────────────────────────────────────────────────────
+initCoverUpload();
+init();
