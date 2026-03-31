@@ -4,122 +4,110 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Treat All Trips</title>
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#8b1a1a" />
-  <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@400;600&display=swap"
     rel="stylesheet"
   />
   <link rel="stylesheet" href="css/main.css" />
 </head>
 <body>
 
-  <!-- ========== 全頁載入遮罩（只放一個，放在 body 最前面）========== -->
-  <div id="page-loading" class="page-loading">
+  <!-- ① 全頁載入遮罩（必須在 body 最頂層） -->
+  <div id="page-loading" class="page-loading" aria-hidden="true">
     <div class="page-loading-inner">
-      <div class="loading-spinner large"></div>
-      <p>載入中⋯</p>
+      <div class="loading-spinner"></div>
+      <p class="loading-text">載入中⋯</p>
     </div>
   </div>
 
-  <!-- ========== 登入畫面 ========== -->
-  <div id="auth-screen" class="screen" style="display:none;">
+  <!-- ② 登入畫面 -->
+  <div id="auth-screen" class="screen hidden">
     <div class="auth-container">
-
       <div class="auth-logo">
-        <div class="auth-logo-icon">✈️</div>
+        <span class="auth-logo-emoji">✈️</span>
         <h1 class="auth-title">Treat All Trips</h1>
-        <p class="auth-subtitle">與重要的人，記錄每一段旅程</p>
+        <p class="auth-subtitle">規劃每一段旅程</p>
       </div>
 
-      <!-- Magic Link 表單 -->
-      <div id="magic-link-form" class="auth-card">
-        <h2 class="auth-card-title">登入 / 註冊</h2>
-        <p class="auth-card-desc">輸入 Email，我們將發送登入連結</p>
-
-        <div class="form-group">
-          <label class="form-label">電子郵件</label>
-          <input
-            type="email"
-            id="auth-email"
-            class="form-input"
-            placeholder="your@email.com"
-            autocomplete="email"
-          />
-        </div>
-
-        <button id="send-magic-link-btn" class="btn btn-primary btn-full">
+      <!-- 輸入表單 -->
+      <div id="magic-link-form" class="auth-form">
+        <label for="auth-email" class="form-label">電子郵件</label>
+        <input
+          id="auth-email"
+          type="email"
+          class="form-input"
+          placeholder="your@email.com"
+          autocomplete="email"
+        />
+        <button id="send-magic-link-btn" class="btn btn-primary btn-block">
           發送登入連結
         </button>
-
-        <div id="auth-message" class="auth-message" style="display:none;"></div>
+        <p id="auth-message" class="auth-message hidden"></p>
       </div>
 
-      <!-- 發送成功狀態 -->
-      <div id="magic-link-sent" class="auth-card" style="display:none;">
-        <div class="auth-sent-icon">📬</div>
-        <h2 class="auth-card-title">確認您的信箱</h2>
-        <p class="auth-card-desc">
-          登入連結已發送至<br/>
-          <strong id="sent-email-display"></strong>
+      <!-- 已發送提示 -->
+      <div id="magic-link-sent" class="auth-sent hidden">
+        <span class="auth-sent-icon">📬</span>
+        <h2 class="auth-sent-title">登入連結已發送！</h2>
+        <p class="auth-sent-desc">
+          請檢查 <strong id="sent-email-display"></strong> 的收件匣
         </p>
-        <p class="auth-card-hint">點擊信中的連結即可登入，連結有效期 1 小時</p>
-        <button id="resend-btn" class="btn btn-ghost btn-full">
-          重新發送
+        <button id="resend-btn" class="btn btn-ghost btn-block">
+          重新輸入電子郵件
         </button>
       </div>
-
     </div>
   </div>
 
-  <!-- ========== 首頁（旅行列表）========== -->
-  <div id="home-screen" class="screen" style="display:none;">
+  <!-- ③ 主頁畫面 -->
+  <div id="home-screen" class="screen hidden">
 
-    <!-- Header -->
+    <!-- 頂部導航 -->
     <header class="app-header">
       <div class="app-header-inner">
-        <div class="app-header-left">
-          <h1 class="app-header-title">我的旅行</h1>
-        </div>
-        <div class="app-header-right">
-          <button id="admin-btn" class="icon-btn" style="display:none;" title="管理後台">
-            ⚙️
+        <span class="app-logo">✈️ Treat All Trips</span>
+        <div class="app-header-actions">
+          <button id="admin-btn" class="btn btn-ghost btn-sm hidden">
+            ⚙️ 管理後台
           </button>
-          <button id="logout-btn" class="icon-btn" title="登出">
-            🚪
-          </button>
+          <span id="user-email-display" class="user-email"></span>
+          <button id="logout-btn" class="btn btn-ghost btn-sm">登出</button>
         </div>
       </div>
     </header>
 
-    <!-- 主內容 -->
+    <!-- 主要內容 -->
     <main class="home-main">
-
-      <!-- 載入中 -->
-      <div id="trips-loading" class="loading-state">
-        <div class="loading-spinner"></div>
-        <p>載入旅行中⋯</p>
+      <div class="home-header">
+        <h2 class="home-title">我的旅行</h2>
       </div>
 
-      <!-- 空狀態 -->
-      <div id="trips-empty" class="empty-state" style="display:none;">
-        <div class="empty-icon">🗺️</div>
-        <h2 class="empty-title">尚無旅行</h2>
-        <p class="empty-desc">等待旅行邀請，或請管理員建立旅行</p>
+      <!-- 旅行列表區域 -->
+      <div class="trips-container">
+
+        <!-- 載入中 -->
+        <div id="trips-loading" class="state-view">
+          <div class="loading-spinner"></div>
+          <p>載入旅行中⋯</p>
+        </div>
+
+        <!-- 空狀態 -->
+        <div id="trips-empty" class="state-view hidden">
+          <span class="state-icon">🗺️</span>
+          <p class="state-title">還沒有旅行計畫</p>
+          <p class="state-desc">等待旅行邀請，或聯絡管理員</p>
+        </div>
+
+        <!-- 旅行卡片列表 -->
+        <div id="trips-list" class="trips-grid hidden"></div>
+
       </div>
-
-      <!-- 旅行列表 -->
-      <div id="trips-list" class="trips-grid" style="display:none;"></div>
-
     </main>
 
-  </div>
+  </div><!-- /#home-screen -->
 
-  <!-- 只載入一個 module 入口 -->
   <script type="module" src="js/home.js"></script>
-
 </body>
 </html>
