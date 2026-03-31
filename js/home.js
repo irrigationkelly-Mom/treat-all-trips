@@ -8,21 +8,18 @@ import {
   isValidEmail,
 } from './auth.js';
 
-// ─── 常數 ───────────────────────────────────────────────────
 const ADMIN_UUID = 'e8f65f02-5726-4b52-baca-ba0359efd1eb';
 
-// ─── DOM 元素 ────────────────────────────────────────────────
-const pageLoading     = document.getElementById('page-loading');
-const authSection     = document.getElementById('auth-section');
-const appSection      = document.getElementById('app-section');
-const emailInput      = document.getElementById('email-input');
-const sendBtn         = document.getElementById('send-magic-link');
-const authMsg         = document.getElementById('auth-message');
-const signOutBtn      = document.getElementById('sign-out-btn');
-const tripsContainer  = document.getElementById('trips-container');
-const userEmailEl     = document.getElementById('user-email');
+const pageLoading    = document.getElementById('page-loading');
+const authSection    = document.getElementById('auth-section');
+const appSection     = document.getElementById('app-section');
+const emailInput     = document.getElementById('email-input');
+const sendBtn        = document.getElementById('send-magic-link');
+const authMsg        = document.getElementById('auth-message');
+const signOutBtn     = document.getElementById('sign-out-btn');
+const tripsContainer = document.getElementById('trips-container');
+const userEmailEl    = document.getElementById('user-email');
 
-// ─── UI 切換 ─────────────────────────────────────────────────
 function showPage(page) {
   pageLoading.classList.add('hidden');
   if (page === 'auth') {
@@ -34,7 +31,6 @@ function showPage(page) {
   }
 }
 
-// ─── 取得使用者 Profile ──────────────────────────────────────
 async function getUserProfile(userId) {
   const { data, error } = await supabase
     .from('profiles')
@@ -45,11 +41,13 @@ async function getUserProfile(userId) {
   return data;
 }
 
-// ─── 載入行程 ─────────────────────────────────────────────────
 async function loadTrips(userId, isAdmin) {
   let query;
   if (isAdmin) {
-    query = supabase.from('trips').select('*').order('start_date', { ascending: true });
+    query = supabase
+      .from('trips')
+      .select('*')
+      .order('start_date', { ascending: true });
   } else {
     query = supabase
       .from('trip_members')
@@ -67,7 +65,6 @@ async function loadTrips(userId, isAdmin) {
   return data.map((row) => row.trips).filter(Boolean);
 }
 
-// ─── Countdown 計算 ──────────────────────────────────────────
 function getCountdown(startDate, endDate) {
   const now   = new Date();
   const start = new Date(startDate);
@@ -75,7 +72,7 @@ function getCountdown(startDate, endDate) {
 
   if (now < start) {
     const days = Math.ceil((start - now) / 86400000);
-    if (days <= 7)  return { label: `${days}天後出發`, cls: 'countdown-soon' };
+    if (days <= 7) return { label: `${days}天後出發`, cls: 'countdown-soon' };
     return { label: `${days}天後`, cls: 'countdown-future' };
   }
   if (now <= end) {
@@ -84,7 +81,6 @@ function getCountdown(startDate, endDate) {
   return { label: '已結束', cls: 'countdown-past' };
 }
 
-// ─── 渲染單張行程卡 ──────────────────────────────────────────
 function createTripCard(trip) {
   const cd   = getCountdown(trip.start_date, trip.end_date);
   const card = document.createElement('div');
@@ -102,7 +98,6 @@ function createTripCard(trip) {
   return card;
 }
 
-// ─── 渲染行程列表 ─────────────────────────────────────────────
 function renderTrips(trips) {
   tripsContainer.innerHTML = '';
   if (!trips.length) {
@@ -115,7 +110,6 @@ function renderTrips(trips) {
   trips.forEach((t) => tripsContainer.appendChild(createTripCard(t)));
 }
 
-// ─── 已登入流程 ──────────────────────────────────────────────
 async function handleSignedIn(session) {
   const userId  = session.user.id;
   const isAdmin = userId === ADMIN_UUID;
@@ -128,7 +122,6 @@ async function handleSignedIn(session) {
   renderTrips(trips);
 }
 
-// ─── Magic Link 送出 ─────────────────────────────────────────
 sendBtn?.addEventListener('click', async () => {
   const email = emailInput?.value?.trim();
   if (!isValidEmail(email)) {
@@ -153,13 +146,11 @@ sendBtn?.addEventListener('click', async () => {
   }
 });
 
-// ─── 登出 ─────────────────────────────────────────────────────
 signOutBtn?.addEventListener('click', async () => {
   await signOut();
   showPage('auth');
 });
 
-// ─── 初始化 ──────────────────────────────────────────────────
 async function init() {
   const session = await waitForSession();
 
