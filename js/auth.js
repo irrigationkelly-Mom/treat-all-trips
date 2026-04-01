@@ -112,3 +112,25 @@ export async function requireAdmin() {
   }
   return session
 }
+
+// ============================
+// join.js 需要的輔助函式
+// ============================
+export async function getCurrentUser() {
+  const { data } = await supabase.auth.getUser()
+  return data?.user ?? null
+}
+
+export async function sendMagicLink(email, redirectTo) {
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: redirectTo }
+  })
+  return { error }
+}
+
+export function onAuthStateChange(callback) {
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(callback)
+  return subscription
+}
+
