@@ -38,13 +38,13 @@ function showScreen(screenId) {
 // 登入畫面
 // ============================
 function initLoginScreen() {
-  const form = document.getElementById('magic-link-form')
   const emailInput = document.getElementById('auth-email')
+  const submitBtn = document.getElementById('send-magic-link-btn')
   const errorMsg = document.getElementById('auth-message')
 
-  if (!form) return
+  if (!submitBtn) return
 
-  form.addEventListener('submit', async (e) => {
+  submitBtn.addEventListener('click', async (e) => {
     e.preventDefault()
     const email = emailInput?.value?.trim()
 
