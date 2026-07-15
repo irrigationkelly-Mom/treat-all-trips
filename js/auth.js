@@ -4,7 +4,7 @@ console.log('[auth.js] 模組開始載入')
 // 設定
 // ============================
 const SUPABASE_URL = 'https://bgmcqkrxifxxcevbvzwf.supabase.co'
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnbWNxa3J4aWZ4eGNldmJ2endmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2OTcwNjYsImV4cCI6MjA5MDI3MzA2Nn0.Jmb_MAvaZpCy1jCwgTPlD0Slpb3i55UJQ823wOXkaBc' // ← 填入你的 anon key
+const SUPABASE_ANON_KEY = 'eyJhbGci••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••' // ← 填入你的 anon key
 const ADMIN_UUID = 'e8f65f02-5726-4b52-baca-ba0359efd1eb'
 
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
@@ -60,12 +60,13 @@ export function isAdmin(userId) {
 export function waitForSession() {
   return new Promise((resolve) => {
     let settled = false
+    let unsub
 
     const settle = (session) => {
       if (settled) return
       settled = true
       clearTimeout(timer)
-      unsub?.()
+      if (unsub) unsub()
       console.log('[auth] session 確定:', session ? session.user.email : 'null')
       resolve(session)
     }
@@ -87,7 +88,7 @@ export function waitForSession() {
       }
     })
 
-    const unsub = () => subscription.unsubscribe()
+    unsub = () => subscription.unsubscribe()
   })
 }
 
@@ -133,4 +134,3 @@ export function onAuthStateChange(callback) {
   const { data: { subscription } } = supabase.auth.onAuthStateChange(callback)
   return subscription
 }
-
