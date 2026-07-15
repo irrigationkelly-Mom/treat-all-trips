@@ -38,9 +38,9 @@ function showScreen(screenId) {
 // 登入畫面
 // ============================
 function initLoginScreen() {
-  const form = document.getElementById('login-form')
-  const emailInput = document.getElementById('email-input')
-  const errorMsg = document.getElementById('login-error')
+  const form = document.getElementById('magic-link-form')
+  const emailInput = document.getElementById('auth-email')
+  const errorMsg = document.getElementById('auth-message')
 
   if (!form) return
 
@@ -66,8 +66,8 @@ function initLoginScreen() {
     if (error) {
       if (errorMsg) errorMsg.textContent = error.message
     } else {
-      showScreen('screen-sent')
-      const sentEmail = document.getElementById('sent-email')
+      showScreen('magic-link-sent')
+      const sentEmail = document.getElementById('sent-email-display')
       if (sentEmail) sentEmail.textContent = email
     }
   })
@@ -77,11 +77,11 @@ function initLoginScreen() {
 // 已發送畫面
 // ============================
 function initSentScreen() {
-  const btn = document.getElementById('btn-resend')
+  const btn = document.getElementById('resend-btn')
   if (!btn) return
 
   btn.addEventListener('click', () => {
-    showScreen('screen-login')
+    showScreen('auth-screen')
   })
 }
 
@@ -146,17 +146,17 @@ async function renderHome(session) {
   const userId = user.id
 
   // 顯示 email
-  const emailEl = document.getElementById('user-email')
+  const emailEl = document.getElementById('user-email-display')
   if (emailEl) emailEl.textContent = user.email
 
   // 管理員按鈕
-  const adminBtn = document.getElementById('btn-admin')
+  const adminBtn = document.getElementById('admin-btn')
   if (adminBtn) {
     adminBtn.style.display = isAdmin(userId) ? 'inline-flex' : 'none'
   }
 
   // 載入行程
-  const tripList = document.getElementById('trip-list')
+  const tripList = document.getElementById('trips-list')
   if (tripList) {
     tripList.innerHTML = '<p class="loading-text">載入中...</p>'
     try {
@@ -173,11 +173,11 @@ async function renderHome(session) {
   }
 
   // 登出按鈕
-  const logoutBtn = document.getElementById('btn-logout')
+  const logoutBtn = document.getElementById('logout-btn')
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
       await supabase.auth.signOut()
-      showScreen('screen-login')
+      showScreen('auth-screen')
     })
   }
 }
@@ -198,14 +198,14 @@ async function init() {
     console.log('[init] session:', session ? session.user.email : 'null')
 
     if (session) {
-      showScreen('screen-home')
+      showScreen('home-screen')
       await renderHome(session)
     } else {
-      showScreen('screen-login')
+      showScreen('auth-screen')
     }
   } catch (err) {
     console.error('[init] 錯誤:', err)
-    showScreen('screen-login')
+    showScreen('auth-screen')
   } finally {
     console.log('[init] finally — 隱藏 loading')
     hideLoading()
