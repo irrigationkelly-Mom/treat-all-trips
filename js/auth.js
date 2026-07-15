@@ -57,6 +57,25 @@ export function isAdmin(userId) {
 // ============================
 // Session 等待
 // ============================
+// 修復 Supabase fetch 編碼問題
+// ============================
+if (typeof window !== 'undefined' && !window._supabasePatched) {
+  window._supabasePatched = true
+  const originalFetch = window.fetch
+  window.fetch = function(...args) {
+    if (args[1]?.headers) {
+      const headers = args[1].headers
+      // 清理所有非ASCII字符的headers
+      for (const key in headers) {
+        if (typeof headers[key] === 'string') {
+          headers[key] = headers[key].replace(/[^\x00-\x7F]/g, '')
+        }
+      }
+    }
+    return originalFetch.apply(this, args)
+  }
+}
+// ============================
 export function waitForSession() {
   return new Promise((resolve) => {
     let settled = false
