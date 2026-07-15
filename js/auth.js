@@ -7,7 +7,7 @@ const SUPABASE_URL = 'https://bgmcqkrxifxxcevbvzwf.supabase.co'
 const SUPABASE_ANON_KEY = 'eyJhbGci••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••'
 const ADMIN_UUID = 'e8f65f02-5726-4b52-baca-ba0359efd1eb'
 
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+import { createClient } from 'https://unpkg.com/@supabase/supabase-js@2.39.0/dist/main.mjs'
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
