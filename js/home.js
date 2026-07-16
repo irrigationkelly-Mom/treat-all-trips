@@ -5,7 +5,8 @@ import {
   waitForSession,
   getMagicLinkRedirect,
   isValidEmail,
-  isAdmin
+  isAdmin,
+  sendMagicLinkViaREST
 } from './auth.js'
 
 // ============================
@@ -44,7 +45,7 @@ function initLoginScreen() {
 
   if (!submitBtn) return
 
-  submitBtn.addEventListener('click', async (e) => {
+    submitBtn.addEventListener('click', async (e) => {
     e.preventDefault()
     const email = emailInput?.value?.trim()
 
@@ -58,20 +59,16 @@ function initLoginScreen() {
     const redirectTo = getMagicLinkRedirect()
     console.log('[home] 發送 magic link，redirect:', redirectTo)
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: redirectTo }
-    })
+    const { error } = await sendMagicLinkViaREST(email, redirectTo)
 
     if (error) {
-      if (errorMsg) errorMsg.textContent = error.message
+      if (errorMsg) errorMsg.textContent = error
     } else {
       showScreen('magic-link-sent')
       const sentEmail = document.getElementById('sent-email-display')
       if (sentEmail) sentEmail.textContent = email
     }
   })
-}
 
 // ============================
 // 已發送畫面
