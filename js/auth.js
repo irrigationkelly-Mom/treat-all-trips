@@ -1,19 +1,13 @@
 console.log('[auth.js] 模組開始載入')
 
-// ============================
-// 設定
-// ============================
 const SUPABASE_URL = 'https://bgmcqkrxifxxcevbvzwf.supabase.co'
 const SUPABASE_ANON_KEY = 'eyJhbGci••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••'
 const ADMIN_UUID = 'e8f65f02-5726-4b52-baca-ba0359efd1eb'
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0'
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-// ============================
-// REST API 備用方案
-// ============================
 export async function sendMagicLinkViaREST(email, redirectTo) {
   try {
     const response = await fetch(`${SUPABASE_URL}/auth/v1/otp?redirect_to=${encodeURIComponent(redirectTo)}`, {
@@ -39,15 +33,7 @@ export async function sendMagicLinkViaREST(email, redirectTo) {
     return { error: err.message }
   }
 }
-    return { success: true }
-  } catch (err) {
-    console.error('[auth] REST API error:', err)
-    return { error: err.message }
-  }
-}
-// ============================
-// URL 工具
-// ============================
+
 export function getBaseUrl() {
   const origin = window.location.origin
   const pathname = window.location.pathname
@@ -63,14 +49,8 @@ export function getMagicLinkRedirect() {
   return getBaseUrl() + '/auth/callback.html'
 }
 
-// ============================
-// 驗證工具
-// ============================
 export const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
-// ============================
-// 使用者資料
-// ============================
 export async function getUserProfile(userId) {
   const { data, error } = await supabase
     .from('profiles')
@@ -88,28 +68,6 @@ export function isAdmin(userId) {
   return userId === ADMIN_UUID
 }
 
-// ============================
-// Session 等待
-// ============================
-// 修復 Supabase fetch 編碼問題
-// ============================
-if (typeof window !== 'undefined' && !window._supabasePatched) {
-  window._supabasePatched = true
-  const originalFetch = window.fetch
-  window.fetch = function(...args) {
-    if (args[1]?.headers) {
-      const headers = args[1].headers
-      // 清理所有非ASCII字符的headers
-      for (const key in headers) {
-        if (typeof headers[key] === 'string') {
-          headers[key] = headers[key].replace(/[^\x00-\x7F]/g, '')
-        }
-      }
-    }
-    return originalFetch.apply(this, args)
-  }
-}
-// ============================
 export function waitForSession() {
   return new Promise((resolve) => {
     let settled = false
@@ -124,14 +82,12 @@ export function waitForSession() {
       resolve(session)
     }
 
-    // timeout 保底
     const timer = setTimeout(async () => {
       console.warn('[auth] timeout，嘗試 getSession fallback')
       const { data } = await supabase.auth.getSession()
       settle(data?.session ?? null)
     }, 8000)
 
-    // 監聽 auth 狀態
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('[auth] onAuthStateChange:', event)
       if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
@@ -145,9 +101,6 @@ export function waitForSession() {
   })
 }
 
-// ============================
-// Route Guards
-// ============================
 export async function requireAuth() {
   const { data } = await supabase.auth.getSession()
   if (!data?.session) {
@@ -167,9 +120,6 @@ export async function requireAdmin() {
   return session
 }
 
-// ============================
-// join.js 需要的輔助函式
-// ============================
 export async function getCurrentUser() {
   const { data } = await supabase.auth.getUser()
   return data?.user ?? null
