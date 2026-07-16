@@ -12,6 +12,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0'
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 // ============================
+// REST API 備用方案
+// ============================
 export async function sendMagicLinkViaREST(email, redirectTo) {
   try {
     const response = await fetch(`${SUPABASE_URL}/auth/v1/otp?redirect_to=${encodeURIComponent(redirectTo)}`, {
@@ -37,8 +39,6 @@ export async function sendMagicLinkViaREST(email, redirectTo) {
     return { error: err.message }
   }
 }
-    }
-
     return { success: true }
   } catch (err) {
     console.error('[auth] REST API error:', err)
