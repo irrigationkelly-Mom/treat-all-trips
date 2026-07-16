@@ -9,9 +9,6 @@ import {
   sendMagicLinkViaREST
 } from './auth.js'
 
-// ============================
-// Loading 控制
-// ============================
 function showLoading() {
   const el = document.getElementById('page-loading')
   if (el) el.classList.remove('hidden')
@@ -25,9 +22,6 @@ function hideLoading() {
   }
 }
 
-// ============================
-// 畫面切換
-// ============================
 function showScreen(screenId) {
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'))
   const target = document.getElementById(screenId)
@@ -35,9 +29,6 @@ function showScreen(screenId) {
   console.log('[home] 顯示畫面:', screenId)
 }
 
-// ============================
-// 登入畫面
-// ============================
 function initLoginScreen() {
   const emailInput = document.getElementById('auth-email')
   const submitBtn = document.getElementById('send-magic-link-btn')
@@ -45,7 +36,7 @@ function initLoginScreen() {
 
   if (!submitBtn) return
 
-    submitBtn.addEventListener('click', async (e) => {
+  submitBtn.addEventListener('click', async (e) => {
     e.preventDefault()
     const email = emailInput?.value?.trim()
 
@@ -68,12 +59,9 @@ function initLoginScreen() {
       const sentEmail = document.getElementById('sent-email-display')
       if (sentEmail) sentEmail.textContent = email
     }
-    })
+  })
 }
 
-// ============================
-// 已發送畫面
-// ============================
 function initSentScreen() {
   const btn = document.getElementById('resend-btn')
   if (!btn) return
@@ -83,9 +71,6 @@ function initSentScreen() {
   })
 }
 
-// ============================
-// 行程卡片
-// ============================
 function getCountdown(startDate, endDate) {
   const now = new Date()
   const start = new Date(startDate)
@@ -115,9 +100,6 @@ function renderTripCard(trip) {
   `
 }
 
-// ============================
-// 載入行程
-// ============================
 async function loadTrips(userId) {
   if (isAdmin(userId)) {
     const { data, error } = await supabase
@@ -136,24 +118,18 @@ async function loadTrips(userId) {
   return (data || []).map(row => row.trips).filter(Boolean)
 }
 
-// ============================
-// 渲染首頁
-// ============================
 async function renderHome(session) {
   const user = session.user
   const userId = user.id
 
-  // 顯示 email
   const emailEl = document.getElementById('user-email-display')
   if (emailEl) emailEl.textContent = user.email
 
-  // 管理員按鈕
   const adminBtn = document.getElementById('admin-btn')
   if (adminBtn) {
     adminBtn.style.display = isAdmin(userId) ? 'inline-flex' : 'none'
   }
 
-  // 載入行程
   const tripList = document.getElementById('trips-list')
   if (tripList) {
     tripList.innerHTML = '<p class="loading-text">載入中...</p>'
@@ -170,7 +146,6 @@ async function renderHome(session) {
     }
   }
 
-  // 登出按鈕
   const logoutBtn = document.getElementById('logout-btn')
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
@@ -180,9 +155,6 @@ async function renderHome(session) {
   }
 }
 
-// ============================
-// 主程式
-// ============================
 async function init() {
   console.log('[init] 開始')
   showLoading()
