@@ -68,7 +68,8 @@ function initLoginScreen() {
       const sentEmail = document.getElementById('sent-email-display')
       if (sentEmail) sentEmail.textContent = email
     }
-  })
+    })
+}
 
 // ============================
 // 已發送畫面
